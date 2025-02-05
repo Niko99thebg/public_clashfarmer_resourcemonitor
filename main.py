@@ -143,7 +143,7 @@ def main():
             else:
                 print("Storages not yet full, will keep retrying\n")
         else:
-            print("Please make sure clashfarmer is open and visible on screen")
+            print("Please make sure clashfarmer is open and visible on screen.")
 
         time.sleep(30)
 
