@@ -69,7 +69,7 @@ def chooseWindow(windows):
             else:
                 log.warning("Please choose a number on your screen")
         except ValueError:
-            log.error("Please pick a number, not letter or symbol")
+            log.warning("Please pick a number, not letter or symbol")
 
 def captureWindow(hwnd):
     rect = win32gui.GetWindowRect(hwnd)
@@ -105,17 +105,17 @@ def resourceExtract(image):
     return resources
 
 def main():
-    log.info("Looking for ClashFarmer")
+    print("\nLooking for ClashFarmer")
     windows = visibleCheck()
     app_windows = filterer(windows)
 
     if not app_windows:
-        log.warning("ClashFarmer not found, make sure it's open and visible on the screen")
+        log.warning("ClashFarmer not found, make sure it's open and visible on the screen\n")
         return
 
     selected_window = chooseWindow(app_windows)
     hwnd, title = selected_window
-    log.info(f"\nSelected window: {title}")
+    print(f"Selected window: {title}")
 
     maxGold = int(input("Enter your max gold amount: "))
     maxElixir = int(input("Enter your max elixir amount: "))
@@ -133,17 +133,17 @@ def main():
             if (resources["gold"] is not None and resources["gold"] >= maxGold and
                 resources["elixir"] is not None and resources["elixir"] >= maxElixir and
                 resources["dark_elixir"] is not None and resources["dark_elixir"] >= maxDark):
-                log.info("\nAll storages full, closing ClashFarmer...")
+                print("All storages full, closing ClashFarmer...\n")
                 try:
                     win32gui.PostMessage(hwnd, 0x0010, 0, 0)
-                    log.info("ClashFarmer closed")
+                    print("ClashFarmer closed")
                 except Exception as e:
                     log.error(f"Failed to close ClashFarmer: {e}")
                 break
             else:
-                log.info("\nStorages not yet full, will keep retrying")
+                print("Storages not yet full, will keep retrying\n")
         else:
-            log.warning("Please make sure clashfarmer is open and visible on screen")
+            print("Please make sure clashfarmer is open and visible on screen")
 
         time.sleep(30)
 
