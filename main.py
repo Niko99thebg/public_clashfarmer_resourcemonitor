@@ -1,5 +1,4 @@
 #TODO: Integrazione con telegram per fermare il bot anzichè terminare il processo, fattibile con un altro bot che contatta il bot di clashfarmer?
-#TODO: Risolvere problemi installazione packages necessari
 import win32gui
 import pyautogui
 #from PIL import Image     capire se serve veramente
