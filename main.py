@@ -1,4 +1,3 @@
-#TODO: Integrazione con telegram per fermare il bot anzichè terminare il processo, fattibile con un altro bot che contatta il bot di clashfarmer?
 import win32gui
 import pyautogui
 #from PIL import Image     capire se serve veramente
@@ -8,6 +7,7 @@ import re
 import time
 
 import coloredlogs, logging
+
 
 #Log settings
 log = logging.getLogger(__name__)

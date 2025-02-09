@@ -42,6 +42,7 @@ loggingfile.setStream(open('logs.log', 'a', encoding='utf-8'))
 log.addHandler(loggingfile)
 
 admin_id = 6325066796
+slavebot_id = 7842814460
 
 async def on_startup(application: Application):
     # Esegui qui le azioni desiderate
@@ -60,11 +61,9 @@ async def on_startup(application: Application):
 
 async def handleStart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if debug_mode:
-        log.info('Bot started from %s', update.message.from_user)
+        log.debug('Bot started from %s', update.message.from_user)
 
-    chat_id = update.effective_chat.id
-
-    if update.message.chat_id == admin_id:
+    if update.message.from_user.id == admin_id:
         # Avvia il task di monitoraggio delle risorse
         log.warning('Bot started from Admin %s', update.message.from_user)
         await update.message.reply_text(f"Comando Start ricevuto da Amministratore: {update.message.from_user.first_name} - @{update.message.from_user.username}")
@@ -73,27 +72,9 @@ async def handleStart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Non hai il permesso di utilizzare questo Bot.")
         pass
 
-async def handleStopClashBot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+async def sendStopMessage(update: Update):
     if debug_mode:
-        log.warning('Clash bot stop command received from %s', update.message.from_user)
-
-    masterbot_id = 1
-
-    try:
-        if update.message.chat_id == admin_id or update.message.chat_id == masterbot_id:
-            log.warning('Bot Stopped from Admin %s', update.message.from_user)
-            await update.message.reply_text(f"Comando STOP ricevuto da Amministratore:\n{update.message.from_user.first_name} - @{update.message.from_user.username}")
-        else:
-            log.warning('Someone tried to stop our clash bot: %s', update.message.from_user)
-            application = Application.builder().token("7358465268:AAGKH1-vglyFjQEt4Hk6D8PZDaB2ceMXZNU").build()
-            await application.bot.send_message(chat_id=admin_id, text=f'Someone tried to stop the bot: {update.message.from_user}')
-            await update.message.reply_text("Non hai il permesso di utilizzare questo Bot.")
-            pass
-    except telegram.error.BadRequest:
-        log.error(f"Errore durante l'invio del messaggio: {e}")
-        application = Application.builder().token("7358465268:AAGKH1-vglyFjQEt4Hk6D8PZDaB2ceMXZNU").build()
-        await application.bot.send_message(chat_id=admin_id, text=f'Errore durante l\'invio del messaggio: {e}')
+        log.info('Sending stop command')
 
 
 async def main():
@@ -107,7 +88,6 @@ async def main():
 
     # Add command handler
     application.add_handler(CommandHandler('start', handleStart))
-    application.add_handler(CommandHandler('stopclashbot1', handleStopClashBot))
 
     #Esegue operazioni preliminari di avvio
     await on_startup(application)

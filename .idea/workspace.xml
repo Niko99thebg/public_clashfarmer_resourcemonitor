@@ -4,12 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="Updated todo and requirements.txt">
-      <change afterPath="$PROJECT_DIR$/telebot.py" afterDir="false" />
+    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="Fist telegram bot implemention. Currently not used in main.py&#10;Updated requirements.txt">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/telebot.py" beforeDir="false" afterPath="$PROJECT_DIR$/telebot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,7 +103,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738714589480</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Fist telegram bot implemention. Currently not used in main.py&#10;Updated requirements.txt">
+      <option name="closed" value="true" />
+      <created>1739068487690</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1739068487690</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -112,6 +119,7 @@
     <MESSAGE value="First adaption" />
     <MESSAGE value="Removed coloredlogs from window selection etc for a better formatting" />
     <MESSAGE value="Updated todo and requirements.txt" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated todo and requirements.txt" />
+    <MESSAGE value="Fist telegram bot implemention. Currently not used in main.py&#10;Updated requirements.txt" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fist telegram bot implemention. Currently not used in main.py&#10;Updated requirements.txt" />
   </component>
 </project>

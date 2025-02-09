@@ -73,3 +73,22 @@
 2025-02-09 03:29:37,964 [INFO] - [telebot.py > on_startup() > 59] - Azioni all'avvio completate.
 2025-02-09 03:29:40,154 [WARNING] - [telebot.py > handleStopClashBot() > 79] - Clash bot stop command received from User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
 2025-02-09 03:29:40,154 [WARNING] - [telebot.py > handleStopClashBot() > 85] - Bot Stopped from Admin User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:46:53,230 [WARNING] - [telebot.py > main() > 83] - DEBUG MODE ENABLED
+2025-02-09 03:46:54,064 [WARNING] - [telebot.py > on_startup() > 49] - Bot avviato, eseguendo azioni di setup...
+2025-02-09 03:46:54,190 [WARNING] - [telebot.py > on_startup() > 55] - Messaggio inviato all'amministratore (chat_id=6325066796).
+2025-02-09 03:46:54,190 [INFO] - [telebot.py > on_startup() > 60] - Azioni all'avvio completate.
+2025-02-09 03:46:56,729 [INFO] - [telebot.py > handleStart() > 64] - Bot started from User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:46:56,730 [WARNING] - [telebot.py > handleStart() > 71] - Someone tried to start the bot, but has no permissions.
+2025-02-09 03:47:41,634 [WARNING] - [telebot.py > main() > 83] - DEBUG MODE ENABLED
+2025-02-09 03:47:42,558 [WARNING] - [telebot.py > on_startup() > 49] - Bot avviato, eseguendo azioni di setup...
+2025-02-09 03:47:42,678 [WARNING] - [telebot.py > on_startup() > 55] - Messaggio inviato all'amministratore (chat_id=6325066796).
+2025-02-09 03:47:42,678 [INFO] - [telebot.py > on_startup() > 60] - Azioni all'avvio completate.
+2025-02-09 03:47:43,911 [INFO] - [telebot.py > handleStart() > 64] - Bot started from User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:47:43,912 [WARNING] - [telebot.py > handleStart() > 68] - Bot started from Admin User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:49:45,843 [WARNING] - [telebot.py > main() > 83] - DEBUG MODE ENABLED
+2025-02-09 03:49:46,677 [WARNING] - [telebot.py > on_startup() > 49] - Bot avviato, eseguendo azioni di setup...
+2025-02-09 03:49:46,784 [WARNING] - [telebot.py > on_startup() > 55] - Messaggio inviato all'amministratore (chat_id=6325066796).
+2025-02-09 03:49:46,784 [INFO] - [telebot.py > on_startup() > 60] - Azioni all'avvio completate.
+2025-02-09 03:49:47,686 [WARNING] - [telebot.py > handleStart() > 68] - Bot started from Admin User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:50:15,987 [WARNING] - [telebot.py > handleStart() > 68] - Bot started from Admin User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
+2025-02-09 03:50:22,851 [WARNING] - [telebot.py > handleStart() > 68] - Bot started from Admin User(first_name='Nik', id=6325066796, is_bot=False, is_premium=True, language_code='it', username='acidodesossiribinucleicoo')
