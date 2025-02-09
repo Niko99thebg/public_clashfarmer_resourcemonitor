@@ -8,7 +8,6 @@ import re
 import time
 
 import coloredlogs, logging
-import asyncio
 
 #Log settings
 log = logging.getLogger(__name__)
