@@ -18,6 +18,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 text_log = None
 CONFIG_FILE = "config.json"
 running = False
+debug_attivo = False  # variabile globale
 
 def salva_config(dati):
     try:
@@ -42,6 +43,20 @@ def lista_finestre():
     finestre = gw.getAllWindows()
     return [w for w in finestre if w.title.strip() != ""]
 
+def log_message(msg):
+    global text_log, debug_attivo
+    msg = str(msg).strip()
+    if not debug_attivo:
+        # Mostra solo messaggi importanti
+        if not any(word in msg.lower() for word in ["errore", "telegram", "soddisfatta", "avviato", "terminato", "trovati", "fermata"]):
+            return
+    print(msg)
+    if text_log is not None:
+        text_log.configure(state='normal')
+        text_log.insert(tk.END, msg + "\n")
+        text_log.see(tk.END)
+        text_log.configure(state='disabled')
+
 def pre_elabora_immagine(image):
     try:
         gray = image.convert("L")
@@ -57,7 +72,6 @@ def cattura_finestra(window):
         bbox = (window.left, window.top, window.width, window.height)
         screenshot_full = pyautogui.screenshot(region=bbox)
 
-        # Coordinate relative ottimizzate
         x_rel, y_rel, w_rel, h_rel = 0.0065, 0.083, 0.94, 0.60
         left = int(window.width * x_rel)
         top = int(window.height * y_rel)
@@ -65,16 +79,13 @@ def cattura_finestra(window):
         bottom = top + int(window.height * h_rel)
 
         cropped = screenshot_full.crop((left, top, right, bottom))
-
-        # Ritaglio extra di 1 pixel ai lati per rimuovere bordi visivi
         width, height = cropped.size
-        cropped_clean = cropped.crop((1, 0, width - 1, height))
+        cropped_clean = cropped.crop((1, 0, width - 1, height))  # margine 1px
 
-        log_message("Screenshot ritagliato (coordinate relative + margine 1px).")
         processed = pre_elabora_immagine(cropped_clean)
-        log_message("Pre-processing dell'immagine completato.")
-        processed.save("debug_crop.png")
-        log_message("Screenshot salvato in debug_crop.png per controllo visivo.")
+        if debug_attivo:
+            processed.save("debug_crop.png")
+            log_message("Immagine salvata in debug_crop.png")
         return processed
     except Exception as e:
         log_message(f"Errore nel catturare/ritagliare l'immagine: {e}")
@@ -83,10 +94,13 @@ def cattura_finestra(window):
 def leggi_testo(image):
     try:
         text = pytesseract.image_to_string(image, config="--psm 6")
-        log_message("Testo letto dall'immagine via OCR (psm 6).")
+        if debug_attivo:
+            with open("debug_text.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            log_message("OCR salvato in debug_text.txt")
         return text
     except Exception as e:
-        log_message(f"Errore nell'esecuzione dell'OCR: {e}")
+        log_message(f"Errore OCR: {e}")
         return ""
 
 def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
@@ -102,43 +116,102 @@ def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
         else:
             return (gold >= gold_max or elixir >= elixir_max or dark >= dark_elixir_max)
     else:
-        log_message("Pattern non trovato nel testo OCR.")
+        if debug_attivo:
+            log_message("Pattern non trovato nel testo OCR.")
     return False
 
-
-def termina_processo(window):
+def termina_processo(_window=None):
     try:
-        import win32process
-        hwnd = window._hWnd
-        _, pid = win32process.GetWindowThreadProcessId(hwnd)
-        proc = psutil.Process(pid)
-        proc.terminate()
-        proc.wait(timeout=5)
-        log_message(f"Processo (pid={proc.pid}) terminato per la finestra '{window.title}'.")
+        target_name = "ClashFarmer.exe"
+        trovati = []
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
+                trovati.append(proc)
+
+        if not trovati:
+            log_message("Nessun processo ClashFarmer.exe trovato.")
+            return
+
+        for proc in trovati:
+            log_message(f"Tentativo di terminare {proc.name()} (PID {proc.pid})")
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+                log_message(f"{proc.name()} terminato correttamente.")
+            except psutil.TimeoutExpired:
+                log_message(f"{proc.name()} non ha risposto a terminate(). Uso kill()...")
+                proc.kill()
+                proc.wait(timeout=3)
+                log_message(f"{proc.name()} forzatamente terminato con kill().")
+            except Exception as e:
+                log_message(f"Errore nel terminare {proc.name()} (PID {proc.pid}): {e}")
     except Exception as e:
-        log_message(f"Errore nella terminazione del processo: {e}")
+        log_message(f"Errore generale nella terminazione del processo: {e}")
 
 def invia_messaggio(bot_token, chat_id, msg):
     try:
+        if not chat_id.startswith("@") and not chat_id.lstrip("-").isdigit():
+            log_message("Attenzione: Il campo 'Telegram username' deve iniziare con @ oppure essere numerico.")
+            return
+
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = requests.post(url, data={"chat_id": chat_id, "text": msg})
         if response.status_code == 200:
-            log_message("Messaggio Telegram inviato correttamente.")
+            log_message(f"Messaggio Telegram inviato a {chat_id}.")
         else:
-            log_message(f"Errore nell'invio del messaggio Telegram: {response.text}")
+            log_message(f"Errore invio Telegram: {response.text}")
     except Exception as e:
-        log_message(f"Errore durante la richiesta a Telegram: {e}")
+        log_message(f"Errore richiesta Telegram: {e}")
 
-def log_message(msg):
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    full_msg = f"[{timestamp}] {msg}\n"
-    print(full_msg, end="")
-    global text_log
-    if text_log is not None:
-        text_log.configure(state='normal')
-        text_log.insert(tk.END, full_msg)
-        text_log.see(tk.END)
-        text_log.configure(state='disabled')
+def registra_telegram_username():
+    token_entry = entries.get("token")[0].get().strip()
+    if not token_entry:
+        messagebox.showwarning("Token mancante", "Inserisci prima il token Telegram.")
+        return
+
+    def attesa_messaggio():
+        log_message("Attesa di un messaggio Telegram per registrazione...")
+        messagebox.showinfo("Registrazione", "Ora scrivi un messaggio al bot su Telegram.")
+
+        start_time = time.time()
+        while time.time() - start_time < 60:
+            try:
+                url = f"https://api.telegram.org/bot{token_entry}/getUpdates"
+                response = requests.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    if "result" in data:
+                        for update in reversed(data["result"]):
+                            msg = update.get("message")
+                            if msg and "chat" in msg and "id" in msg["chat"]:
+                                chat_id = msg["chat"]["id"]
+                                username = msg["chat"].get("username", "")
+                                log_message(f"Chat ID ricevuto: {chat_id} (username: @{username})")
+                                entries["chat_id"][0].delete(0, tk.END)
+                                entries["chat_id"][0].insert(0, str(chat_id))
+                                if entries["chat_id"][1].get():
+                                    salvati["chat_id"] = str(chat_id)
+                                    salva_config(salvati)
+                                return
+                time.sleep(2)
+            except Exception as e:
+                log_message(f"Errore durante la registrazione Telegram: {e}")
+                break
+        log_message("Timeout: nessun messaggio ricevuto entro 60 secondi.")
+
+    threading.Thread(target=attesa_messaggio, daemon=True).start()
+def aggiorna_stato_bottoni():
+    if running:
+        btn_avvia.config(state="disabled")
+        btn_aggiorna.config(state="disabled")
+        finestra_menu.config(state="disabled")
+        btn_ferma.config(state="normal")
+    else:
+        btn_avvia.config(state="normal")
+        btn_aggiorna.config(state="normal")
+        finestra_menu.config(state="readonly")
+        btn_ferma.config(state="disabled")
 
 def monitoraggio(config, window):
     global running
@@ -160,8 +233,10 @@ def monitoraggio(config, window):
                 config.get("tutte", True)
             ):
                 log_message("Condizione soddisfatta: valori raggiunti.")
-                termina_processo(window)
+                termina_processo()
                 invia_messaggio(config["token"], config["chat_id"], "Valori massimi raggiunti: finestra terminata.")
+                running = False
+                aggiorna_stato_bottoni()
                 break
             else:
                 log_message("Condizione non ancora soddisfatta.")
@@ -169,13 +244,16 @@ def monitoraggio(config, window):
             log_message(f"Errore nella valutazione della condizione: {e}")
         time.sleep(float(config["intervallo"]) * 60)
     running = False
+    aggiorna_stato_bottoni()
     log_message("Monitoraggio terminato.")
 
 def avvia_script():
-    global running
+    global running, debug_attivo
     if running:
         log_message("Il monitoraggio è già in esecuzione.")
         return
+
+    debug_attivo = debug_var.get()
 
     config = {}
     for key, (entry, chk_var) in entries.items():
@@ -185,6 +263,7 @@ def avvia_script():
             salvati[key] = val
 
     config["tutte"] = tutte_var.get()
+    salvati["tutte"] = tutte_var.get()
 
     window_title = finestra_var.get().strip()
     finestre = lista_finestre()
@@ -196,6 +275,7 @@ def avvia_script():
 
     salva_config(salvati)
     running = True
+    aggiorna_stato_bottoni()
     threading.Thread(target=monitoraggio, args=(config, window), daemon=True).start()
 
 def ferma_script():
@@ -203,6 +283,7 @@ def ferma_script():
     if running:
         running = False
         log_message("Richiesta di fermata del monitoraggio.")
+        aggiorna_stato_bottoni()
     else:
         log_message("Il monitoraggio non è in esecuzione.")
 
@@ -233,7 +314,7 @@ campi = {
     "elixir": "Elixir max",
     "dark_elixir": "Dark Elixir max",
     "token": "Token Telegram",
-    "chat_id": "Chat ID / Username"
+    "chat_id": "Telegram username"
 }
 
 entries = {}
@@ -242,6 +323,11 @@ for key, label in campi.items():
     ttk.Label(main_frame, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=3)
     entry = ttk.Entry(main_frame)
     entry.grid(row=row, column=1, sticky="ew", padx=5, pady=3)
+
+    if key == "chat_id":
+        btn_reg = ttk.Button(main_frame, text="Registrati", command=registra_telegram_username)
+        btn_reg.grid(row=row, column=3, padx=5, pady=3)
+
     if key in salvati:
         entry.insert(0, salvati[key])
     var = tk.BooleanVar(value=(key in salvati))
@@ -257,6 +343,11 @@ tutte_var = tk.BooleanVar(value=salvati.get("tutte", True))
 ttk.Label(main_frame, text="Condizione risorse:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
 chk_tutte = ttk.Checkbutton(main_frame, text="Tutte le risorse al massimo", variable=tutte_var)
 chk_tutte.grid(row=row, column=1, sticky="w", padx=5, pady=3)
+row += 1
+
+debug_var = tk.BooleanVar(value=False)
+chk_debug = ttk.Checkbutton(main_frame, text="Modalità Debug", variable=debug_var)
+chk_debug.grid(row=row, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 row += 1
 
 ttk.Label(main_frame, text="Finestra da monitorare:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
@@ -288,5 +379,6 @@ text_log.config(yscrollcommand=scrollbar.set)
 log_frame.rowconfigure(0, weight=1)
 log_frame.columnconfigure(0, weight=1)
 
-log_message("Applicazione avviata.")
+log_message("Application started.")
+aggiorna_stato_bottoni()
 root.mainloop()
