@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, PhotoImage
 import threading
 import json
 import time
@@ -10,9 +10,10 @@ import requests
 import pytesseract
 import pyautogui
 import pygetwindow as gw
+import webbrowser
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
-version=1.0
+version=1.1
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -252,8 +253,8 @@ def terminate_process():
 
 def send_telegram(bot_token, chat_id, message):
     try:
-        if not chat_id.startswith("@") and not chat_id.lstrip("-").isdigit():
-            log_message("Invalid chat ID. Use @username or numeric ID.")
+        if not chat_id.lstrip("-").isdigit():
+            log_message("Invalid chat ID. Use numeric ID.")
             return
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = requests.post(url, data={"chat_id": chat_id, "text": message})
@@ -356,6 +357,14 @@ root.iconbitmap("icon.ico")
 root.title(f"ClashFarmer Resource Monitor - Ver. {version}")
 root.geometry("800x600")
 
+# === Buttons icons
+start_icon = PhotoImage(file="start_icon.png")
+stop_icon = PhotoImage(file="stop_icon.png")
+exit_icon = PhotoImage(file="exit_icon.png")
+save_icon = PhotoImage(file="save_icon.png")
+refresh_icon = PhotoImage(file="refresh_icon.png")
+
+
 # === GRID CONFIG root
 root.columnconfigure(0, weight=1)
 root.rowconfigure(1, weight=1)  # log area
@@ -408,7 +417,8 @@ ttk.Checkbutton(main_frame, text="All resources must reach the max \n(If not sel
 row += 1
 
 # Save button (smaller)
-btn_save = ttk.Button(main_frame, text="Save Settings", command=save_config_manual, width=20)
+btn_save = ttk.Button(main_frame, text="Save Settings", image=save_icon, compound="left", command=save_config_manual, width=20)
+btn_save.image = save_icon  # to prevent garbage collection
 btn_save.grid(row=row, column=0, padx=5, pady=5, sticky="w")
 row += 1
 
@@ -430,7 +440,8 @@ window_menu = ttk.Combobox(window_frame, textvariable=window_var)
 window_menu['values'] = [w.title for w in list_windows()]
 window_menu.grid(row=0, column=0, sticky="ew")
 
-btn_refresh = ttk.Button(window_frame, text="Refresh", command=lambda: window_menu.config(values=[w.title for w in list_windows()]))
+btn_refresh = ttk.Button(window_frame, text="Refresh", image=refresh_icon, compound="left", command=lambda: window_menu.config(values=[w.title for w in list_windows()]))
+btn_refresh.image = refresh_icon  # to prevent garbage collection
 btn_refresh.grid(row=0, column=1, padx=(5, 0))
 row += 1
 
@@ -447,17 +458,39 @@ scrollbar = ttk.Scrollbar(log_frame, command=text_log.yview)
 scrollbar.grid(row=0, column=1, sticky="ns")
 text_log.config(yscrollcommand=scrollbar.set)
 
-# === BOTTOM BUTTONS
-bottom_frame = ttk.Frame(root, padding=5)
-bottom_frame.grid(row=2, column=0, sticky="ew")
-bottom_frame.columnconfigure(0, weight=0)
-bottom_frame.columnconfigure(1, weight=0)
+# === BOTTOM LEFT BUTTONS (Start / Stop)
+bottom_left_frame = ttk.Frame(root, padding=5)
+bottom_left_frame.grid(row=2, column=0, sticky="w")
+bottom_left_frame.columnconfigure(0, weight=0)
+bottom_left_frame.columnconfigure(1, weight=0)
 
-btn_start = ttk.Button(bottom_frame, text="Start", command=start_monitoring, width=15)
+btn_start = ttk.Button(bottom_left_frame, text="Start", image=start_icon, compound="left", command=start_monitoring, width=15)
+btn_start.image = start_icon  # to prevent garbage collection
 btn_start.grid(row=0, column=0, padx=(0, 5), pady=5, sticky="w")
 
-btn_stop = ttk.Button(bottom_frame, text="Stop", command=stop_monitoring, width=15, state="disabled")
+btn_stop = ttk.Button(bottom_left_frame, text="Stop", image=stop_icon, compound="left", command=stop_monitoring, width=15, state="disabled")
+btn_stop.image = stop_icon  # to prevent garbage collection
 btn_stop.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="w")
+
+# === BOTTOM RIGHT BUTTONS (Github + Exit)
+def open_github():
+    webbrowser.open_new("https://github.com/Niko99thebg/public_clashfarmer_resourcemonitor")
+
+def exit_app():
+    global running
+    running = False
+    root.quit()
+    root.destroy()
+
+bottom_right_frame = ttk.Frame(root, padding=5)
+bottom_right_frame.grid(row=2, column=0, sticky="e")
+
+btn_github = ttk.Button(bottom_right_frame, text="Github Project", command=open_github)
+btn_github.pack(side="left", padx=(0, 5))
+
+btn_exit = ttk.Button(bottom_right_frame, text="Exit", image=exit_icon, compound="left", command=exit_app)
+btn_exit.image = exit_icon  # to prevent garbage collection
+btn_exit.pack(side="left")
 
 # === RUN LOOP
 log_message("Application started.")
