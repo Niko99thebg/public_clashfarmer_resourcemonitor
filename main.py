@@ -12,43 +12,41 @@ import pyautogui
 import pygetwindow as gw
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
-# Percorso Tesseract
+# Path to Tesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 text_log = None
 CONFIG_FILE = "config.json"
 running = False
-debug_attivo = False  # variabile globale
+debug_enabled = False
 
-def salva_config(dati):
+def save_config(data):
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(dati, f)
-        log_message("Configurazione salvata.")
+            json.dump(data, f)
+        log_message("Configuration saved.")
     except Exception as e:
-        log_message(f"Errore nel salvataggio della configurazione: {e}")
+        log_message(f"Error saving configuration: {e}")
 
-def carica_config():
+def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
                 config = json.load(f)
-            log_message("Configurazione caricata.")
+            log_message("Configuration loaded.")
             return config
         except Exception as e:
-            log_message(f"Errore nel caricamento della configurazione: {e}")
+            log_message(f"Error loading configuration: {e}")
     return {}
 
-def lista_finestre():
-    finestre = gw.getAllWindows()
-    return [w for w in finestre if w.title.strip() != ""]
+def list_windows():
+    return [w for w in gw.getAllWindows() if w.title.strip() != ""]
 
 def log_message(msg):
-    global text_log, debug_attivo
+    global text_log, debug_enabled
     msg = str(msg).strip()
-    if not debug_attivo:
-        # Mostra solo messaggi importanti
-        if not any(word in msg.lower() for word in ["errore", "telegram", "soddisfatta", "avviato", "terminato", "trovati", "fermata"]):
+    if not debug_enabled:
+        if not any(word in msg.lower() for word in ["error", "telegram", "reached", "started", "terminated", "found", "stopped"]):
             return
     print(msg)
     if text_log is not None:
@@ -57,53 +55,50 @@ def log_message(msg):
         text_log.see(tk.END)
         text_log.configure(state='disabled')
 
-def pre_elabora_immagine(image):
+def preprocess_image(image):
     try:
         gray = image.convert("L")
         contrast = ImageEnhance.Contrast(gray).enhance(2.0)
         sharpened = contrast.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
         return sharpened
     except Exception as e:
-        log_message(f"Errore nel pre-processing immagine: {e}")
+        log_message(f"Image preprocessing error: {e}")
         return image
 
-def cattura_finestra(window):
+def capture_window(window):
     try:
         bbox = (window.left, window.top, window.width, window.height)
-        screenshot_full = pyautogui.screenshot(region=bbox)
-
+        screenshot = pyautogui.screenshot(region=bbox)
         x_rel, y_rel, w_rel, h_rel = 0.0065, 0.083, 0.94, 0.60
         left = int(window.width * x_rel)
         top = int(window.height * y_rel)
         right = left + int(window.width * w_rel)
         bottom = top + int(window.height * h_rel)
-
-        cropped = screenshot_full.crop((left, top, right, bottom))
+        cropped = screenshot.crop((left, top, right, bottom))
         width, height = cropped.size
-        cropped_clean = cropped.crop((1, 0, width - 1, height))  # margine 1px
-
-        processed = pre_elabora_immagine(cropped_clean)
-        if debug_attivo:
+        cleaned = cropped.crop((1, 0, width - 1, height))
+        processed = preprocess_image(cleaned)
+        if debug_enabled:
             processed.save("debug_crop.png")
-            log_message("Immagine salvata in debug_crop.png")
+            log_message("Saved debug_crop.png")
         return processed
     except Exception as e:
-        log_message(f"Errore nel catturare/ritagliare l'immagine: {e}")
+        log_message(f"Error capturing/cropping image: {e}")
         return None
 
-def leggi_testo(image):
+def read_text(image):
     try:
         text = pytesseract.image_to_string(image, config="--psm 6")
-        if debug_attivo:
+        if debug_enabled:
             with open("debug_text.txt", "w", encoding="utf-8") as f:
                 f.write(text)
-            log_message("OCR salvato in debug_text.txt")
+            log_message("Saved debug_text.txt")
         return text
     except Exception as e:
-        log_message(f"OCR Error: {e}")
+        log_message(f"OCR error: {e}")
         return ""
 
-def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
+def resource_condition(text, gold_max, elixir_max, dark_elixir_max, require_all):
     pattern = r"Current Resources:\s*Gold:\s*(\d+)\s*Elixir:\s*(\d+)\s*Dark[_\s]?Elixir:\s*(\d+)"
     match = re.search(pattern, text, re.IGNORECASE)
     if match:
@@ -111,73 +106,64 @@ def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
         elixir = int(match.group(2))
         dark = int(match.group(3))
         log_message(f"Found values: Gold={gold} - Elixir={elixir} - Dark Elixir={dark}")
-        if tutte:
-            return (gold >= gold_max and elixir >= elixir_max and dark >= dark_elixir_max)
+        if require_all:
+            return gold >= gold_max and elixir >= elixir_max and dark >= dark_elixir_max
         else:
-            return (gold >= gold_max or elixir >= elixir_max or dark >= dark_elixir_max)
+            return gold >= gold_max or elixir >= elixir_max or dark >= dark_elixir_max
     else:
-        if debug_attivo:
-            log_message("Pattern not found in  OCR text.")
+        if debug_enabled:
+            log_message("Pattern not found in OCR text.")
     return False
 
-def termina_processo(_window=None):
+def terminate_process():
     try:
         target_name = "ClashFarmer.exe"
-        trovati = []
-
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
-                trovati.append(proc)
-
-        if not trovati:
+        found = [proc for proc in psutil.process_iter(['pid', 'name']) if proc.info['name'] and target_name.lower() in proc.info['name'].lower()]
+        if not found:
             log_message("ClashFarmer.exe not found.")
             return
-
-        for proc in trovati:
-            log_message(f"Trying to terminate {proc.name()} (PID {proc.pid})")
+        for proc in found:
+            log_message(f"Attempting to terminate {proc.name()} (PID {proc.pid})")
             try:
                 proc.terminate()
                 proc.wait(timeout=5)
                 log_message(f"{proc.name()} terminated.")
             except psutil.TimeoutExpired:
-                log_message(f"{proc.name()} didn\'t respond to terminate(). Using  kill()...")
+                log_message(f"{proc.name()} did not respond. Using kill().")
                 proc.kill()
                 proc.wait(timeout=3)
-                log_message(f"{proc.name()} killed..")
+                log_message(f"{proc.name()} forcefully killed.")
             except Exception as e:
-                log_message(f"Errore nel terminare {proc.name()} (PID {proc.pid}): {e}")
+                log_message(f"Error terminating {proc.name()}: {e}")
     except Exception as e:
-        log_message(f"Errore generale nella terminazione del processo: {e}")
+        log_message(f"General process termination error: {e}")
 
-def invia_messaggio(bot_token, chat_id, msg):
+def send_telegram_message(bot_token, chat_id, message):
     try:
         if not chat_id.startswith("@") and not chat_id.lstrip("-").isdigit():
-            log_message("Attenzione: Il campo 'Telegram username' deve iniziare con @ oppure essere numerico.")
+            log_message("Invalid chat ID: must be numeric.")
             return
-
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        response = requests.post(url, data={"chat_id": chat_id, "text": msg})
+        response = requests.post(url, data={"chat_id": chat_id, "text": message})
         if response.status_code == 200:
             log_message(f"Telegram message sent to {chat_id}.")
         else:
-            log_message(f"Errore invio Telegram: {response.text}")
+            log_message(f"Telegram send error: {response.text}")
     except Exception as e:
-        log_message(f"Errore richiesta Telegram: {e}")
+        log_message(f"Telegram request error: {e}")
 
-def registra_telegram_username():
-    token_entry = entries.get("token")[0].get().strip()
-    if not token_entry:
-        messagebox.showwarning("Token Error", "Please, first insert your bot's token.")
+def register_telegram_user():
+    token = entries.get("token")[0].get().strip()
+    if not token:
+        messagebox.showwarning("Missing Token", "Please enter your bot token first.")
         return
-
-    def attesa_messaggio():
-        log_message("Waiting for telegram message...")
-        messagebox.showinfo("Telegram user registration", "Send a message to your telegram bot.")
-
-        start_time = time.time()
-        while time.time() - start_time < 60:
+    def wait_for_message():
+        log_message("Waiting for Telegram message...")
+        messagebox.showinfo("Telegram Registration", "Send a message to your bot now.")
+        start = time.time()
+        while time.time() - start < 60:
             try:
-                url = f"https://api.telegram.org/bot{token_entry}/getUpdates"
+                url = f"https://api.telegram.org/bot{token}/getUpdates"
                 response = requests.get(url)
                 if response.status_code == 200:
                     data = response.json()
@@ -187,113 +173,111 @@ def registra_telegram_username():
                             if msg and "chat" in msg and "id" in msg["chat"]:
                                 chat_id = msg["chat"]["id"]
                                 username = msg["chat"].get("username", "")
-                                log_message(f"Chat ID ricevuto: {chat_id} (username: @{username})")
+                                log_message(f"Received chat_id: {chat_id} (username: @{username})")
                                 entries["chat_id"][0].delete(0, tk.END)
                                 entries["chat_id"][0].insert(0, str(chat_id))
                                 if entries["chat_id"][1].get():
-                                    salvati["chat_id"] = str(chat_id)
-                                    salva_config(salvati)
+                                    saved["chat_id"] = str(chat_id)
+                                    save_config(saved)
                                 return
                 time.sleep(2)
             except Exception as e:
-                log_message(f"Errore durante la registrazione Telegram: {e}")
+                log_message(f"Telegram registration error: {e}")
                 break
-        log_message("Timeout: nessun messaggio ricevuto entro 60 secondi.")
+        log_message("Timeout waiting for message.")
 
-    threading.Thread(target=attesa_messaggio, daemon=True).start()
-def aggiorna_stato_bottoni():
+    threading.Thread(target=wait_for_message, daemon=True).start()
+def update_buttons():
     if running:
-        btn_avvia.config(state="disabled")
-        btn_aggiorna.config(state="disabled")
-        finestra_menu.config(state="disabled")
-        btn_ferma.config(state="normal")
+        btn_start.config(state="disabled")
+        btn_refresh.config(state="disabled")
+        window_menu.config(state="disabled")
+        btn_stop.config(state="normal")
     else:
-        btn_avvia.config(state="normal")
-        btn_aggiorna.config(state="normal")
-        finestra_menu.config(state="readonly")
-        btn_ferma.config(state="disabled")
+        btn_start.config(state="normal")
+        btn_refresh.config(state="normal")
+        window_menu.config(state="readonly")
+        btn_stop.config(state="disabled")
 
-def monitoraggio(config, window):
-    global running
-    log_message("Monitoraggio avviato.")
-    while running:
-        image = cattura_finestra(window)
-        if image is None:
-            log_message("Immagine non valida, riprovo tra 5 secondi...")
-            time.sleep(5)
-            continue
-        testo = leggi_testo(image)
-        log_message(f"Testo OCR:\n{testo}")
-        try:
-            if condizione_risorse(
-                testo,
-                int(config["gold"]),
-                int(config["elixir"]),
-                int(config["dark_elixir"]),
-                config.get("tutte", True)
-            ):
-                log_message("Found condition: valori raggiunti.")
-                termina_processo()
-                invia_messaggio(config["token"], config["chat_id"], "Valori massimi raggiunti: finestra terminata.")
-                running = False
-                aggiorna_stato_bottoni()
-                break
-            else:
-                log_message("Condizione non ancora soddisfatta.")
-        except Exception as e:
-            log_message(f"Errore nella valutazione della condizione: {e}")
-        time.sleep(float(config["intervallo"]) * 60)
-    running = False
-    aggiorna_stato_bottoni()
-    log_message("Monitoring session terminated.")
-
-def avvia_script():
-    global running, debug_attivo
+def start_monitoring():
+    global running, debug_enabled
     if running:
-        log_message("Monitor already started.")
+        log_message("Monitoring already running.")
         return
 
-    debug_attivo = debug_var.get()
-
+    debug_enabled = debug_var.get()
     config = {}
     for key, (entry, chk_var) in entries.items():
         val = entry.get().strip()
         config[key] = val
         if chk_var.get():
-            salvati[key] = val
+            saved[key] = val
+    config["all"] = all_var.get()
+    saved["all"] = all_var.get()
 
-    config["tutte"] = tutte_var.get()
-    salvati["tutte"] = tutte_var.get()
-
-    window_title = finestra_var.get().strip()
-    finestre = lista_finestre()
-    window = next((w for w in finestre if w.title == window_title), None)
+    title = window_var.get().strip()
+    windows = list_windows()
+    window = next((w for w in windows if w.title == title), None)
     if not window:
-        log_message("Error: Selected window not found.")
-        messagebox.showerror("Error", "Window not found. Update window list or check the title.")
+        log_message("Error: window not found.")
+        messagebox.showerror("Error", "Window not found. Please refresh or check title.")
         return
 
-    salva_config(salvati)
+    save_config(saved)
     running = True
-    aggiorna_stato_bottoni()
-    threading.Thread(target=monitoraggio, args=(config, window), daemon=True).start()
+    update_buttons()
+    threading.Thread(target=monitor_loop, args=(config, window), daemon=True).start()
 
-def ferma_script():
+def stop_monitoring():
     global running
     if running:
         running = False
-        log_message("Monitoring script stopped.")
-        aggiorna_stato_bottoni()
+        log_message("Monitoring stopped.")
+        update_buttons()
     else:
-        log_message("Monitor is not in execution.")
+        log_message("Monitoring is not running.")
 
-def aggiorna_stato_entry(chk_var, entry):
+def monitor_loop(config, window):
+    global running
+    log_message("Monitoring started.")
+    while running:
+        image = capture_window(window)
+        if image is None:
+            log_message("Invalid image, retrying in 5s...")
+            time.sleep(5)
+            continue
+        text = read_text(image)
+        log_message(f"OCR Text:\n{text}")
+        try:
+            if resource_condition(
+                text,
+                int(config["gold"]),
+                int(config["elixir"]),
+                int(config["dark_elixir"]),
+                config.get("all", True)
+            ):
+                log_message("Condition met: max values reached.")
+                terminate_process()
+                send_telegram_message(config["token"], config["chat_id"], "Max resources reached. Window closed.")
+                running = False
+                update_buttons()
+                break
+            else:
+                log_message("Condition not yet met.")
+        except Exception as e:
+            log_message(f"Error evaluating condition: {e}")
+        time.sleep(float(config["interval"]) * 60)
+    running = False
+    update_buttons()
+    log_message("Monitoring ended.")
+
+def toggle_entry_state(chk_var, entry):
     if chk_var.get():
         entry.configure(state="disabled")
-        log_message("Field saved in config and locked.")
+        log_message("Field saved and locked.")
     else:
         entry.configure(state="normal")
-        log_message("Field unlocked.")
+        log_message("Field unlocked for editing.")
 
 # === GUI ===
 root = tk.Tk()
@@ -306,66 +290,71 @@ root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 
-salvati = carica_config()
+saved = load_config()
 
-campi = {
-    "intervallo": "Check interval (minutes)",
-    "gold": "Gold max",
-    "elixir": "Elixir max",
-    "dark_elixir": "Dark Elixir max",
-    "token": "Token Telegram Bot",
-    "chat_id": "Telegram user ID"
+fields = {
+    "interval": "Check Interval (minutes)",
+    "gold": "Gold Max",
+    "elixir": "Elixir Max",
+    "dark_elixir": "Dark Elixir Max",
+    "token": "Telegram Bot Token",
+    "chat_id": "Telegram Username/Chat ID"
 }
 
 entries = {}
 row = 0
-for key, label in campi.items():
+for key, label in fields.items():
     ttk.Label(main_frame, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=3)
     entry = ttk.Entry(main_frame)
     entry.grid(row=row, column=1, sticky="ew", padx=5, pady=3)
 
     if key == "chat_id":
-        btn_reg = ttk.Button(main_frame, text="Register ID", command=registra_telegram_username)
-        btn_reg.grid(row=row, column=3, padx=5, pady=3)
+        btn_register = ttk.Button(main_frame, text="Register", command=register_telegram_user)
+        btn_register.grid(row=row, column=3, padx=5, pady=3)
 
-    if key in salvati:
-        entry.insert(0, salvati[key])
-    var = tk.BooleanVar(value=(key in salvati))
+    if key in saved:
+        entry.insert(0, saved[key])
+    var = tk.BooleanVar(value=(key in saved))
     chk = ttk.Checkbutton(main_frame, variable=var)
     chk.grid(row=row, column=2, padx=5, pady=3)
-    var.trace_add("write", lambda *args, chk_var=var, ent=entry: aggiorna_stato_entry(chk_var, ent))
+    var.trace_add("write", lambda *args, v=var, e=entry: toggle_entry_state(v, e))
     if var.get():
         entry.configure(state="disabled")
     entries[key] = (entry, var)
     row += 1
 
-tutte_var = tk.BooleanVar(value=salvati.get("tutte", True))
-ttk.Label(main_frame, text="Resoruce Condition:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
-chk_tutte = ttk.Checkbutton(main_frame, text="All (if disabled: if only one resource is above the limit the script will stop ClashFarmer)", variable=tutte_var)
-chk_tutte.grid(row=row, column=1, sticky="w", padx=5, pady=3)
+# Resource condition checkbox
+all_var = tk.BooleanVar(value=saved.get("all", True))
+ttk.Label(main_frame, text="Stop condition:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
+chk_all = ttk.Checkbutton(main_frame, text="All resources must be full", variable=all_var)
+chk_all.grid(row=row, column=1, sticky="w", padx=5, pady=3)
 row += 1
 
+# Debug mode checkbox
 debug_var = tk.BooleanVar(value=False)
-chk_debug = ttk.Checkbutton(main_frame, text="Debug Mode (use only when errors occurred.)", variable=debug_var)
+chk_debug = ttk.Checkbutton(main_frame, text="Enable Debug Mode", variable=debug_var)
 chk_debug.grid(row=row, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 row += 1
 
-ttk.Label(main_frame, text="Select ClashFarmer Window:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
-finestra_var = tk.StringVar()
-finestra_menu = ttk.Combobox(main_frame, textvariable=finestra_var, width=60)
-finestra_menu['values'] = [w.title for w in lista_finestre()]
-finestra_menu.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=3)
+# Window selection
+ttk.Label(main_frame, text="Window to monitor:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
+window_var = tk.StringVar()
+window_menu = ttk.Combobox(main_frame, textvariable=window_var, width=60)
+window_menu['values'] = [w.title for w in list_windows()]
+window_menu.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=3)
 row += 1
 
-btn_avvia = ttk.Button(main_frame, text="Start monitor", command=avvia_script)
-btn_avvia.grid(row=row, column=0, padx=5, pady=5, sticky="ew")
-btn_ferma = ttk.Button(main_frame, text="Stop monitor", command=ferma_script)
-btn_ferma.grid(row=row, column=1, padx=5, pady=5, sticky="ew")
-btn_aggiorna = ttk.Button(main_frame, text="Aggiorna Finestre",
-                          command=lambda: finestra_menu.config(values=[w.title for w in lista_finestre()]))
-btn_aggiorna.grid(row=row, column=2, padx=5, pady=5, sticky="ew")
+# Buttons
+btn_start = ttk.Button(main_frame, text="Start", command=start_monitoring)
+btn_start.grid(row=row, column=0, padx=5, pady=5, sticky="ew")
+btn_stop = ttk.Button(main_frame, text="Stop", command=stop_monitoring)
+btn_stop.grid(row=row, column=1, padx=5, pady=5, sticky="ew")
+btn_refresh = ttk.Button(main_frame, text="Refresh Windows",
+                         command=lambda: window_menu.config(values=[w.title for w in list_windows()]))
+btn_refresh.grid(row=row, column=2, padx=5, pady=5, sticky="ew")
 row += 1
 
+# Log area
 log_frame = ttk.Frame(root, padding=10)
 log_frame.grid(row=1, column=0, sticky="nsew")
 root.rowconfigure(1, weight=1)
@@ -380,5 +369,5 @@ log_frame.rowconfigure(0, weight=1)
 log_frame.columnconfigure(0, weight=1)
 
 log_message("Application started.")
-aggiorna_stato_bottoni()
+update_buttons()
 root.mainloop()

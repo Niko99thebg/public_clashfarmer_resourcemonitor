@@ -4,8 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="First beta release. To test.">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="hgf">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/telebot.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -158,7 +161,31 @@
       <option name="project" value="LOCAL" />
       <updated>1744472157946</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="hgf">
+      <option name="closed" value="true" />
+      <created>1744474385875</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1744474385875</updated>
+    </task>
+    <task id="LOCAL-00012" summary="hgf">
+      <option name="closed" value="true" />
+      <created>1744474392936</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1744474392936</updated>
+    </task>
+    <task id="LOCAL-00013" summary="hgf">
+      <option name="closed" value="true" />
+      <created>1744474447635</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1744474447635</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -170,6 +197,7 @@
     <MESSAGE value="Removed telegram implementation. A bot cannot message another bot, group solution not working." />
     <MESSAGE value="Added exception KeyboardInterrupt to main.py just for pleasure." />
     <MESSAGE value="First beta release. To test." />
-    <option name="LAST_COMMIT_MESSAGE" value="First beta release. To test." />
+    <MESSAGE value="hgf" />
+    <option name="LAST_COMMIT_MESSAGE" value="hgf" />
   </component>
 </project>
