@@ -22,7 +22,8 @@ A Python GUI application that monitors your resource levels in ClashFarmer using
 ## Requirements
 
 - Python 3.9+
-- Tesseract OCR installed and added to PATH  
+- Tesseract OCR installed and added to PATH
+  (Directory: C:\Program Files\Tesseract-OCR)
   👉 [Download Tesseract](https://github.com/tesseract-ocr/tesseract)
 
 ---
