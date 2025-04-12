@@ -20,7 +20,7 @@ import ctypes
 def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin() != 0
 
-version=2.0
+version=2.1
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -275,14 +275,14 @@ def run_dynamic_ahk_click(window):
         Sleep, 300
         DllCall("SetCursorPos", "int", {click_x}, "int", {click_y})
         Sleep, 150
-        Click 2
+        Click
         """
 
         with open("click_stop_bot.ahk", "w", encoding="utf-8") as f:
             f.write(ahk_code.strip())
 
         subprocess.Popen([ahk_path, "click_stop_bot.ahk"])
-        log_message(f"AutoHotKey DOUBLE click sent at ({click_x}, {click_y})")
+        log_message(f"AutoHotKey SINGLE click sent at ({click_x}, {click_y})")
         return True
 
     except Exception as e:
@@ -534,4 +534,6 @@ btn_exit.pack(side="left")
 log_message("Application started.")
 if not is_admin():
     messagebox.showwarning("Permission", "Please run this script as Administrator.")
+    root.quit()
+    root.destroy()
 root.mainloop()
