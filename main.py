@@ -12,19 +12,44 @@ import pyautogui
 import pygetwindow as gw
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
-# Path to Tesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+version=1.0
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
 text_log = None
 CONFIG_FILE = "config.json"
 running = False
 debug_enabled = False
+entries = {}
+saved = {}
 
-def save_config(data):
+def log_message(msg):
+    global text_log, debug_enabled
+    msg = str(msg).strip()
+
+    # Quando debug è disattivato, non mostrare l'OCR text ma tutto il resto
+    if not debug_enabled and msg.startswith("OCR Text:"):
+        return
+
+    print(msg)
+    if text_log:
+        text_log.configure(state="normal")
+        text_log.insert(tk.END, msg + "\n")
+        text_log.see(tk.END)
+        text_log.configure(state="disabled")
+
+
+def save_config_manual():
+    config = {}
+    for key, entry in entries.items():
+        config[key] = entry.get().strip()
+    config["all"] = all_var.get()
+    saved.update(config)
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(data, f)
-        log_message("Configuration saved.")
+            json.dump(config, f)
+        log_message("Settings saved to config.json.")
+        log_message("Settings saved.")
     except Exception as e:
         log_message(f"Error saving configuration: {e}")
 
@@ -32,29 +57,62 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
-                config = json.load(f)
-            log_message("Configuration loaded.")
-            return config
-        except Exception as e:
-            log_message(f"Error loading configuration: {e}")
+                return json.load(f)
+        except:
+            return {}
     return {}
+
+def register_telegram_user():
+    token = entries.get("token").get().strip()
+    if not token:
+        messagebox.showwarning("Missing Token", "Please enter your bot token first.")
+        return
+
+    def wait_for_new_message():
+        log_message("Waiting for a new Telegram message...")
+        messagebox.showinfo("Telegram Registration", "Send a new message to your bot now.")
+
+        try:
+            # Step 1: get current update_id (the latest)
+            url = f"https://api.telegram.org/bot{token}/getUpdates"
+            response = requests.get(url)
+            last_update_id = None
+
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get("result", [])
+                if results:
+                    last_update_id = results[-1]["update_id"]
+
+            # Step 2: poll for new messages with offset
+            start_time = time.time()
+            while time.time() - start_time < 60:
+                offset_param = {"offset": last_update_id + 1} if last_update_id is not None else {}
+                response = requests.get(url, params=offset_param)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    updates = data.get("result", [])
+                    if updates:
+                        for update in updates:
+                            msg = update.get("message")
+                            if msg and "chat" in msg and "id" in msg["chat"]:
+                                chat_id = msg["chat"]["id"]
+                                username = msg["chat"].get("username", "")
+                                log_message(f"Received chat_id: {chat_id} (username: @{username})")
+                                entries["chat_id"].delete(0, tk.END)
+                                entries["chat_id"].insert(0, str(chat_id))
+                                return
+                time.sleep(2)
+
+            log_message("Timeout: no new message received in 60 seconds.")
+        except Exception as e:
+            log_message(f"Telegram registration error: {e}")
+
+    threading.Thread(target=wait_for_new_message, daemon=True).start()
 
 def list_windows():
     return [w for w in gw.getAllWindows() if w.title.strip() != ""]
-
-def log_message(msg):
-    global text_log, debug_enabled
-    msg = str(msg).strip()
-    if not debug_enabled:
-        if not any(word in msg.lower() for word in ["error", "telegram", "reached", "started", "terminated", "found", "stopped"]):
-            return
-    print(msg)
-    if text_log is not None:
-        text_log.configure(state='normal')
-        text_log.insert(tk.END, msg + "\n")
-        text_log.see(tk.END)
-        text_log.configure(state='disabled')
-
 def preprocess_image(image):
     try:
         gray = image.convert("L")
@@ -83,7 +141,7 @@ def capture_window(window):
             log_message("Saved debug_crop.png")
         return processed
     except Exception as e:
-        log_message(f"Error capturing/cropping image: {e}")
+        log_message(f"Error capturing window: {e}")
         return None
 
 def read_text(image):
@@ -105,269 +163,275 @@ def resource_condition(text, gold_max, elixir_max, dark_elixir_max, require_all)
         gold = int(match.group(1))
         elixir = int(match.group(2))
         dark = int(match.group(3))
-        log_message(f"Found values: Gold={gold} - Elixir={elixir} - Dark Elixir={dark}")
+        log_message(f"Found values: Gold={gold}, Elixir={elixir}, Dark Elixir={dark}")
         if require_all:
             return gold >= gold_max and elixir >= elixir_max and dark >= dark_elixir_max
         else:
             return gold >= gold_max or elixir >= elixir_max or dark >= dark_elixir_max
-    else:
-        if debug_enabled:
-            log_message("Pattern not found in OCR text.")
+    elif debug_enabled:
+        log_message("Pattern not found in OCR.")
     return False
+
 
 def terminate_process():
     try:
         target_name = "ClashFarmer.exe"
-        found = [proc for proc in psutil.process_iter(['pid', 'name']) if proc.info['name'] and target_name.lower() in proc.info['name'].lower()]
+        found = False
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
+                found = True
+                log_message(f"Force killing {proc.name()} (PID {proc.pid}) and its children...")
+
+                # Terminate child processes first
+                for child in proc.children(recursive=True):
+                    try:
+                        if child.is_running():
+                            child.kill()
+                            try:
+                                child.wait(timeout=3)
+                                log_message(f"Child {child.name()} (PID {child.pid}) killed.")
+                            except psutil.TimeoutExpired:
+                                if not child.is_running():
+                                    log_message(f"Child {child.name()} (PID {child.pid}) killed (wait timeout, but process exited).")
+                                else:
+                                    raise
+                        else:
+                            log_message(f"Child {child.name()} (PID {child.pid}) was already terminated.")
+                    except Exception as e:
+                        log_message(f"Failed to kill child PID {child.pid}: {e}")
+
+                # Terminate parent process
+                try:
+                    if proc.is_running():
+                        proc.kill()
+                        try:
+                            proc.wait(timeout=3)
+                            log_message(f"{proc.name()} (PID {proc.pid}) killed.")
+                        except psutil.TimeoutExpired:
+                            if not proc.is_running():
+                                log_message(f"{proc.name()} (PID {proc.pid}) killed (wait timeout, but process exited).")
+                            else:
+                                raise
+                    else:
+                        log_message(f"{proc.name()} (PID {proc.pid}) was already terminated.")
+                except Exception as e:
+                    log_message(f"Failed to kill {proc.name()} (PID {proc.pid}): {e}")
+
         if not found:
             log_message("ClashFarmer.exe not found.")
-            return
-        for proc in found:
-            log_message(f"Attempting to terminate {proc.name()} (PID {proc.pid})")
-            try:
-                proc.terminate()
-                proc.wait(timeout=5)
-                log_message(f"{proc.name()} terminated.")
-            except psutil.TimeoutExpired:
-                log_message(f"{proc.name()} did not respond. Using kill().")
-                proc.kill()
-                proc.wait(timeout=3)
-                log_message(f"{proc.name()} forcefully killed.")
-            except Exception as e:
-                log_message(f"Error terminating {proc.name()}: {e}")
     except Exception as e:
-        log_message(f"General process termination error: {e}")
+        log_message(f"Error during process termination: {e}")
 
-def send_telegram_message(bot_token, chat_id, message):
+
+def send_telegram(bot_token, chat_id, message):
     try:
         if not chat_id.startswith("@") and not chat_id.lstrip("-").isdigit():
-            log_message("Invalid chat ID: must be numeric.")
+            log_message("Invalid chat ID. Use @username or numeric ID.")
             return
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = requests.post(url, data={"chat_id": chat_id, "text": message})
         if response.status_code == 200:
             log_message(f"Telegram message sent to {chat_id}.")
         else:
-            log_message(f"Telegram send error: {response.text}")
+            log_message(f"Telegram error: {response.text}")
     except Exception as e:
         log_message(f"Telegram request error: {e}")
 
-def register_telegram_user():
-    token = entries.get("token")[0].get().strip()
-    if not token:
-        messagebox.showwarning("Missing Token", "Please enter your bot token first.")
-        return
-    def wait_for_message():
-        log_message("Waiting for Telegram message...")
-        messagebox.showinfo("Telegram Registration", "Send a message to your bot now.")
-        start = time.time()
-        while time.time() - start < 60:
-            try:
-                url = f"https://api.telegram.org/bot{token}/getUpdates"
-                response = requests.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-                    if "result" in data:
-                        for update in reversed(data["result"]):
-                            msg = update.get("message")
-                            if msg and "chat" in msg and "id" in msg["chat"]:
-                                chat_id = msg["chat"]["id"]
-                                username = msg["chat"].get("username", "")
-                                log_message(f"Received chat_id: {chat_id} (username: @{username})")
-                                entries["chat_id"][0].delete(0, tk.END)
-                                entries["chat_id"][0].insert(0, str(chat_id))
-                                if entries["chat_id"][1].get():
-                                    saved["chat_id"] = str(chat_id)
-                                    save_config(saved)
-                                return
-                time.sleep(2)
-            except Exception as e:
-                log_message(f"Telegram registration error: {e}")
-                break
-        log_message("Timeout waiting for message.")
-
-    threading.Thread(target=wait_for_message, daemon=True).start()
-def update_buttons():
-    if running:
-        btn_start.config(state="disabled")
-        btn_refresh.config(state="disabled")
-        window_menu.config(state="disabled")
-        btn_stop.config(state="normal")
-    else:
-        btn_start.config(state="normal")
-        btn_refresh.config(state="normal")
-        window_menu.config(state="readonly")
-        btn_stop.config(state="disabled")
+def update_input_state(enabled=True):
+    state = "normal" if enabled else "disabled"
+    for entry in entries.values():
+        entry.configure(state=state)
+    btn_save.config(state=state)
 
 def start_monitoring():
     global running, debug_enabled
     if running:
         log_message("Monitoring already running.")
         return
-
     debug_enabled = debug_var.get()
-    config = {}
-    for key, (entry, chk_var) in entries.items():
-        val = entry.get().strip()
-        config[key] = val
-        if chk_var.get():
-            saved[key] = val
+    config = {k: v.get().strip() for k, v in entries.items()}
     config["all"] = all_var.get()
-    saved["all"] = all_var.get()
-
     title = window_var.get().strip()
-    windows = list_windows()
-    window = next((w for w in windows if w.title == title), None)
+    window = next((w for w in list_windows() if w.title == title), None)
     if not window:
-        log_message("Error: window not found.")
-        messagebox.showerror("Error", "Window not found. Please refresh or check title.")
+        messagebox.showerror("Error", "Selected window not found.")
         return
-
-    save_config(saved)
     running = True
-    update_buttons()
+    update_input_state(False)
+    btn_start.config(state="disabled")
+    btn_refresh.config(state="disabled")
+    btn_stop.config(state="normal")
     threading.Thread(target=monitor_loop, args=(config, window), daemon=True).start()
 
 def stop_monitoring():
     global running
-    if running:
-        running = False
-        log_message("Monitoring stopped.")
-        update_buttons()
-    else:
-        log_message("Monitoring is not running.")
+    running = False
+    update_input_state(True)
+    btn_start.config(state="normal")
+    btn_refresh.config(state="normal")
+    btn_stop.config(state="disabled")
+    log_message("Monitoring stopped.")
 
 def monitor_loop(config, window):
     global running
     log_message("Monitoring started.")
+
+    try:
+        delay = float(config.get("interval", 1))
+        if delay <= 0:
+            raise ValueError
+    except ValueError:
+        log_message("Invalid interval value. Defaulting to 1 minute.")
+        delay = 1
+
     while running:
         image = capture_window(window)
         if image is None:
             log_message("Invalid image, retrying in 5s...")
             time.sleep(5)
             continue
+
         text = read_text(image)
-        log_message(f"OCR Text:\n{text}")
+
+        if debug_enabled:
+            log_message(f"OCR Text:\n{text}")
+
         try:
             if resource_condition(
                 text,
                 int(config["gold"]),
                 int(config["elixir"]),
                 int(config["dark_elixir"]),
-                config.get("all", True)
+                config["all"]
             ):
-                log_message("Condition met: max values reached.")
+                log_message("Condition met. Terminating.")
                 terminate_process()
-                send_telegram_message(config["token"], config["chat_id"], "Max resources reached. Window closed.")
-                running = False
-                update_buttons()
+                send_telegram(
+                    config["token"],
+                    config["chat_id"],
+                    "Max resources reached. ClashFarmer closed."
+                )
+                stop_monitoring()
                 break
             else:
-                log_message("Condition not yet met.")
+                log_message("Condition not met.")
         except Exception as e:
-            log_message(f"Error evaluating condition: {e}")
-        time.sleep(float(config["interval"]) * 60)
-    running = False
-    update_buttons()
-    log_message("Monitoring ended.")
+            log_message(f"Error checking condition: {e}")
 
-def toggle_entry_state(chk_var, entry):
-    if chk_var.get():
-        entry.configure(state="disabled")
-        log_message("Field saved and locked.")
-    else:
-        entry.configure(state="normal")
-        log_message("Field unlocked for editing.")
+        time.sleep(delay * 60)
+
+    log_message("Monitoring session ended.")
+
 
 # === GUI ===
 root = tk.Tk()
-root.title("ClashFarmer Resource Monitor")
+root.title(f"ClashFarmer Resource Monitor - Ver. {version}")
 root.geometry("800x600")
 
-main_frame = ttk.Frame(root, padding=10)
-main_frame.grid(row=0, column=0, sticky="nsew")
+# === GRID CONFIG root
 root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=0)
+root.rowconfigure(1, weight=1)  # log area
+root.rowconfigure(2, weight=0)  # bottom buttons
+
+# === MAIN FRAME
+main_frame = ttk.Frame(root, padding=5)
+main_frame.grid(row=0, column=0, sticky="nsew")
+main_frame.columnconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 
 saved = load_config()
-
 fields = {
     "interval": "Check Interval (minutes)",
     "gold": "Gold Max",
     "elixir": "Elixir Max",
     "dark_elixir": "Dark Elixir Max",
     "token": "Telegram Bot Token",
-    "chat_id": "Telegram Username/Chat ID"
+    "chat_id": "Telegram Chat ID"
 }
 
-entries = {}
+entries.clear()
 row = 0
 for key, label in fields.items():
-    ttk.Label(main_frame, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=3)
-    entry = ttk.Entry(main_frame)
-    entry.grid(row=row, column=1, sticky="ew", padx=5, pady=3)
+    ttk.Label(main_frame, text=label).grid(row=row, column=0, sticky="w", padx=5, pady=5)
 
     if key == "chat_id":
-        btn_register = ttk.Button(main_frame, text="Register", command=register_telegram_user)
-        btn_register.grid(row=row, column=3, padx=5, pady=3)
+        entry_frame = ttk.Frame(main_frame)
+        entry_frame.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
+        entry_frame.columnconfigure(0, weight=1)
 
-    if key in saved:
-        entry.insert(0, saved[key])
-    var = tk.BooleanVar(value=(key in saved))
-    chk = ttk.Checkbutton(main_frame, variable=var)
-    chk.grid(row=row, column=2, padx=5, pady=3)
-    var.trace_add("write", lambda *args, v=var, e=entry: toggle_entry_state(v, e))
-    if var.get():
-        entry.configure(state="disabled")
-    entries[key] = (entry, var)
+        entry = ttk.Entry(entry_frame)
+        entry.grid(row=0, column=0, sticky="ew")
+
+        btn_register = ttk.Button(entry_frame, text="Register", command=register_telegram_user)
+        btn_register.grid(row=0, column=1, padx=(5, 0))
+
+    else:
+        entry = ttk.Entry(main_frame)
+        entry.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
+
+    entry.insert(0, saved.get(key, ""))
+    entries[key] = entry
     row += 1
 
-# Resource condition checkbox
+# All resources checkbox
 all_var = tk.BooleanVar(value=saved.get("all", True))
-ttk.Label(main_frame, text="Stop condition:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
-chk_all = ttk.Checkbutton(main_frame, text="All resources must be full", variable=all_var)
-chk_all.grid(row=row, column=1, sticky="w", padx=5, pady=3)
+ttk.Checkbutton(main_frame, text="All resources must reach the max \n(If not selected the bot will stop once one resource reached the limit.)", variable=all_var)\
+    .grid(row=row, column=0, columnspan=3, sticky="w", padx=5, pady=5)
 row += 1
 
-# Debug mode checkbox
+# Save button (smaller)
+btn_save = ttk.Button(main_frame, text="Save Settings", command=save_config_manual, width=20)
+btn_save.grid(row=row, column=0, padx=5, pady=5, sticky="w")
+row += 1
+
+# Debug mode
 debug_var = tk.BooleanVar(value=False)
-chk_debug = ttk.Checkbutton(main_frame, text="Enable Debug Mode", variable=debug_var)
-chk_debug.grid(row=row, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+ttk.Checkbutton(main_frame, text="Enable Debug Mode\n(This will create debug logs and files)", variable=debug_var)\
+    .grid(row=row, column=0, columnspan=3, sticky="w", padx=5, pady=5)
 row += 1
 
-# Window selection
-ttk.Label(main_frame, text="Window to monitor:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
+# Window selector + Refresh (responsive)
+ttk.Label(main_frame, text="Window to monitor:").grid(row=row, column=0, sticky="w", padx=5, pady=5)
+
+window_frame = ttk.Frame(main_frame)
+window_frame.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
+window_frame.columnconfigure(0, weight=1)
+
 window_var = tk.StringVar()
-window_menu = ttk.Combobox(main_frame, textvariable=window_var, width=60)
+window_menu = ttk.Combobox(window_frame, textvariable=window_var)
 window_menu['values'] = [w.title for w in list_windows()]
-window_menu.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=3)
+window_menu.grid(row=0, column=0, sticky="ew")
+
+btn_refresh = ttk.Button(window_frame, text="Refresh", command=lambda: window_menu.config(values=[w.title for w in list_windows()]))
+btn_refresh.grid(row=0, column=1, padx=(5, 0))
 row += 1
 
-# Buttons
-btn_start = ttk.Button(main_frame, text="Start", command=start_monitoring)
-btn_start.grid(row=row, column=0, padx=5, pady=5, sticky="ew")
-btn_stop = ttk.Button(main_frame, text="Stop", command=stop_monitoring)
-btn_stop.grid(row=row, column=1, padx=5, pady=5, sticky="ew")
-btn_refresh = ttk.Button(main_frame, text="Refresh Windows",
-                         command=lambda: window_menu.config(values=[w.title for w in list_windows()]))
-btn_refresh.grid(row=row, column=2, padx=5, pady=5, sticky="ew")
-row += 1
-
-# Log area
-log_frame = ttk.Frame(root, padding=10)
+# === LOG FRAME
+log_frame = ttk.Frame(root, padding=5)
 log_frame.grid(row=1, column=0, sticky="nsew")
-root.rowconfigure(1, weight=1)
-root.columnconfigure(0, weight=1)
+log_frame.columnconfigure(0, weight=1)
+log_frame.rowconfigure(0, weight=1)
 
 text_log = tk.Text(log_frame, wrap="word", state="disabled")
-text_log.grid(row=0, column=0, sticky="nsew")
+text_log.grid(row=0, column=0, sticky="nsew", padx=(0, 0), pady=(0, 0))
+
 scrollbar = ttk.Scrollbar(log_frame, command=text_log.yview)
 scrollbar.grid(row=0, column=1, sticky="ns")
 text_log.config(yscrollcommand=scrollbar.set)
-log_frame.rowconfigure(0, weight=1)
-log_frame.columnconfigure(0, weight=1)
 
+# === BOTTOM BUTTONS
+bottom_frame = ttk.Frame(root, padding=5)
+bottom_frame.grid(row=2, column=0, sticky="ew")
+bottom_frame.columnconfigure(0, weight=0)
+bottom_frame.columnconfigure(1, weight=0)
+
+btn_start = ttk.Button(bottom_frame, text="Start", command=start_monitoring, width=15)
+btn_start.grid(row=0, column=0, padx=(0, 5), pady=5, sticky="w")
+
+btn_stop = ttk.Button(bottom_frame, text="Stop", command=stop_monitoring, width=15, state="disabled")
+btn_stop.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="w")
+
+# === RUN LOOP
 log_message("Application started.")
-update_buttons()
 root.mainloop()
