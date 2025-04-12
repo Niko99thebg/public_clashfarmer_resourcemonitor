@@ -37,7 +37,7 @@ A Python GUI application that monitors your resource levels in ClashFarmer using
 
 2. Extract the folder.
 
-3. Run `ClashFarmer Resource Monitor.exe`
+3. Run `ClashFarmer Resource Monitor.exe` without removing it from the folder.
 
 ---
 
