@@ -11,9 +11,16 @@ import pytesseract
 import pyautogui
 import pygetwindow as gw
 import webbrowser
-from PIL import Image, ImageOps, ImageFilter, ImageEnhance
+import subprocess
+import win32gui
+import win32con
+from PIL import Image, ImageOps, ImageFilter, ImageEnhance, ImageDraw
 
-version=1.1
+import ctypes
+def is_admin():
+    return ctypes.windll.shell32.IsUserAnAdmin() != 0
+
+version=2.0
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -140,6 +147,7 @@ def register_telegram_user():
 
 def list_windows():
     return [w for w in gw.getAllWindows() if w.title.strip() != ""]
+
 def preprocess_image(image):
     try:
         gray = image.convert("L")
@@ -200,56 +208,86 @@ def resource_condition(text, gold_max, elixir_max, dark_elixir_max, require_all)
     return False
 
 
-def terminate_process():
+# def terminate_process():
+#     try:
+#         target_name = "ClashFarmer.exe"
+#         found = False
+#
+#         for proc in psutil.process_iter(['pid', 'name']):
+#             if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
+#                 found = True
+#                 log_message(f"Force killing {proc.name()} (PID {proc.pid}) and its children...")
+#
+#                 # Terminate child processes first
+#                 for child in proc.children(recursive=True):
+#                     try:
+#                         if child.is_running():
+#                             child.kill()
+#                             try:
+#                                 child.wait(timeout=3)
+#                                 log_message(f"Child {child.name()} (PID {child.pid}) killed.")
+#                             except psutil.TimeoutExpired:
+#                                 if not child.is_running():
+#                                     log_message(f"Child {child.name()} (PID {child.pid}) killed (wait timeout, but process exited).")
+#                                 else:
+#                                     raise
+#                         else:
+#                             log_message(f"Child {child.name()} (PID {child.pid}) was already terminated.")
+#                     except Exception as e:
+#                         log_message(f"Failed to kill child PID {child.pid}: {e}")
+#
+#                 # Terminate parent process
+#                 try:
+#                     if proc.is_running():
+#                         proc.kill()
+#                         try:
+#                             proc.wait(timeout=3)
+#                             log_message(f"{proc.name()} (PID {proc.pid}) killed.")
+#                         except psutil.TimeoutExpired:
+#                             if not proc.is_running():
+#                                 log_message(f"{proc.name()} (PID {proc.pid}) killed (wait timeout, but process exited).")
+#                             else:
+#                                 raise
+#                     else:
+#                         log_message(f"{proc.name()} (PID {proc.pid}) was already terminated.")
+#                 except Exception as e:
+#                     log_message(f"Failed to kill {proc.name()} (PID {proc.pid}): {e}")
+#
+#         if not found:
+#             log_message("ClashFarmer.exe not found.")
+#     except Exception as e:
+#         log_message(f"Error during process termination: {e}")
+
+def run_dynamic_ahk_click(window):
     try:
-        target_name = "ClashFarmer.exe"
-        found = False
+        ahk_path = r"C:\Program Files\AutoHotkey\AutoHotkey.exe"  # ← verifica il percorso!
+        hwnd = window._hWnd
+        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
 
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
-                found = True
-                log_message(f"Force killing {proc.name()} (PID {proc.pid}) and its children...")
+        # Coordinate: in basso a sinistra, leggermente più in alto
+        click_x = left + 50
+        click_y = bottom - 40 + 8
 
-                # Terminate child processes first
-                for child in proc.children(recursive=True):
-                    try:
-                        if child.is_running():
-                            child.kill()
-                            try:
-                                child.wait(timeout=3)
-                                log_message(f"Child {child.name()} (PID {child.pid}) killed.")
-                            except psutil.TimeoutExpired:
-                                if not child.is_running():
-                                    log_message(f"Child {child.name()} (PID {child.pid}) killed (wait timeout, but process exited).")
-                                else:
-                                    raise
-                        else:
-                            log_message(f"Child {child.name()} (PID {child.pid}) was already terminated.")
-                    except Exception as e:
-                        log_message(f"Failed to kill child PID {child.pid}: {e}")
+        ahk_code = f"""
+        SetTitleMatchMode, 2
+        CoordMode, Mouse, Screen
+        WinActivate, ClashFarmer
+        Sleep, 300
+        DllCall("SetCursorPos", "int", {click_x}, "int", {click_y})
+        Sleep, 150
+        Click 2
+        """
 
-                # Terminate parent process
-                try:
-                    if proc.is_running():
-                        proc.kill()
-                        try:
-                            proc.wait(timeout=3)
-                            log_message(f"{proc.name()} (PID {proc.pid}) killed.")
-                        except psutil.TimeoutExpired:
-                            if not proc.is_running():
-                                log_message(f"{proc.name()} (PID {proc.pid}) killed (wait timeout, but process exited).")
-                            else:
-                                raise
-                    else:
-                        log_message(f"{proc.name()} (PID {proc.pid}) was already terminated.")
-                except Exception as e:
-                    log_message(f"Failed to kill {proc.name()} (PID {proc.pid}): {e}")
+        with open("click_stop_bot.ahk", "w", encoding="utf-8") as f:
+            f.write(ahk_code.strip())
 
-        if not found:
-            log_message("ClashFarmer.exe not found.")
+        subprocess.Popen([ahk_path, "click_stop_bot.ahk"])
+        log_message(f"AutoHotKey DOUBLE click sent at ({click_x}, {click_y})")
+        return True
+
     except Exception as e:
-        log_message(f"Error during process termination: {e}")
-
+        log_message(f"Dynamic AHK error: {e}")
+        return False
 
 def send_telegram(bot_token, chat_id, message):
     try:
@@ -333,7 +371,7 @@ def monitor_loop(config, window):
                 config["all"]
             ):
                 log_message("Condition met. Terminating.")
-                terminate_process()
+                run_dynamic_ahk_click(window)
                 send_telegram(
                     config["token"],
                     config["chat_id"],
@@ -494,4 +532,6 @@ btn_exit.pack(side="left")
 
 # === RUN LOOP
 log_message("Application started.")
+if not is_admin():
+    messagebox.showwarning("Permission", "Please run this script as Administrator.")
 root.mainloop()
