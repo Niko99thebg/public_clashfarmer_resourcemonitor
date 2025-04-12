@@ -352,6 +352,7 @@ def monitor_loop(config, window):
 
 # === GUI ===
 root = tk.Tk()
+root.iconbitmap("icon.ico")
 root.title(f"ClashFarmer Resource Monitor - Ver. {version}")
 root.geometry("800x600")
 
@@ -402,7 +403,7 @@ for key, label in fields.items():
 
 # All resources checkbox
 all_var = tk.BooleanVar(value=saved.get("all", True))
-ttk.Checkbutton(main_frame, text="All resources must reach the max \n(If not selected the bot will stop once one resource reached the limit.)", variable=all_var)\
+ttk.Checkbutton(main_frame, text="All resources must reach the max \n(If not selected the bot will stop when one resource reaches the limit.)", variable=all_var)\
     .grid(row=row, column=0, columnspan=3, sticky="w", padx=5, pady=5)
 row += 1
 
