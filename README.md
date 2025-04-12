@@ -2,7 +2,7 @@
 
 A Python GUI application that monitors your resource levels in ClashFarmer using screen OCR, and stops the bot automatically when resource limits are reached. Telegram notifications are sent when limits are triggered.
 
-![screenshot](preview.png) <!-- Optional: add screenshot image -->
+![screenshot](preview.jpg) <!-- Optional: add screenshot image -->
 
 ---
 
