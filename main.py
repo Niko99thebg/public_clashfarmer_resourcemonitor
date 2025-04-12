@@ -100,7 +100,7 @@ def leggi_testo(image):
             log_message("OCR salvato in debug_text.txt")
         return text
     except Exception as e:
-        log_message(f"Errore OCR: {e}")
+        log_message(f"OCR Error: {e}")
         return ""
 
 def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
@@ -110,14 +110,14 @@ def condizione_risorse(text, gold_max, elixir_max, dark_elixir_max, tutte):
         gold = int(match.group(1))
         elixir = int(match.group(2))
         dark = int(match.group(3))
-        log_message(f"Valori trovati: Gold={gold} - Elixir={elixir} - Dark Elixir={dark}")
+        log_message(f"Found values: Gold={gold} - Elixir={elixir} - Dark Elixir={dark}")
         if tutte:
             return (gold >= gold_max and elixir >= elixir_max and dark >= dark_elixir_max)
         else:
             return (gold >= gold_max or elixir >= elixir_max or dark >= dark_elixir_max)
     else:
         if debug_attivo:
-            log_message("Pattern non trovato nel testo OCR.")
+            log_message("Pattern not found in  OCR text.")
     return False
 
 def termina_processo(_window=None):
@@ -130,20 +130,20 @@ def termina_processo(_window=None):
                 trovati.append(proc)
 
         if not trovati:
-            log_message("Nessun processo ClashFarmer.exe trovato.")
+            log_message("ClashFarmer.exe not found.")
             return
 
         for proc in trovati:
-            log_message(f"Tentativo di terminare {proc.name()} (PID {proc.pid})")
+            log_message(f"Trying to terminate {proc.name()} (PID {proc.pid})")
             try:
                 proc.terminate()
                 proc.wait(timeout=5)
-                log_message(f"{proc.name()} terminato correttamente.")
+                log_message(f"{proc.name()} terminated.")
             except psutil.TimeoutExpired:
-                log_message(f"{proc.name()} non ha risposto a terminate(). Uso kill()...")
+                log_message(f"{proc.name()} didn\'t respond to terminate(). Using  kill()...")
                 proc.kill()
                 proc.wait(timeout=3)
-                log_message(f"{proc.name()} forzatamente terminato con kill().")
+                log_message(f"{proc.name()} killed..")
             except Exception as e:
                 log_message(f"Errore nel terminare {proc.name()} (PID {proc.pid}): {e}")
     except Exception as e:
@@ -158,7 +158,7 @@ def invia_messaggio(bot_token, chat_id, msg):
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = requests.post(url, data={"chat_id": chat_id, "text": msg})
         if response.status_code == 200:
-            log_message(f"Messaggio Telegram inviato a {chat_id}.")
+            log_message(f"Telegram message sent to {chat_id}.")
         else:
             log_message(f"Errore invio Telegram: {response.text}")
     except Exception as e:
@@ -167,12 +167,12 @@ def invia_messaggio(bot_token, chat_id, msg):
 def registra_telegram_username():
     token_entry = entries.get("token")[0].get().strip()
     if not token_entry:
-        messagebox.showwarning("Token mancante", "Inserisci prima il token Telegram.")
+        messagebox.showwarning("Token Error", "Please, first insert your bot's token.")
         return
 
     def attesa_messaggio():
-        log_message("Attesa di un messaggio Telegram per registrazione...")
-        messagebox.showinfo("Registrazione", "Ora scrivi un messaggio al bot su Telegram.")
+        log_message("Waiting for telegram message...")
+        messagebox.showinfo("Telegram user registration", "Send a message to your telegram bot.")
 
         start_time = time.time()
         while time.time() - start_time < 60:
@@ -232,7 +232,7 @@ def monitoraggio(config, window):
                 int(config["dark_elixir"]),
                 config.get("tutte", True)
             ):
-                log_message("Condizione soddisfatta: valori raggiunti.")
+                log_message("Found condition: valori raggiunti.")
                 termina_processo()
                 invia_messaggio(config["token"], config["chat_id"], "Valori massimi raggiunti: finestra terminata.")
                 running = False
@@ -245,12 +245,12 @@ def monitoraggio(config, window):
         time.sleep(float(config["intervallo"]) * 60)
     running = False
     aggiorna_stato_bottoni()
-    log_message("Monitoraggio terminato.")
+    log_message("Monitoring session terminated.")
 
 def avvia_script():
     global running, debug_attivo
     if running:
-        log_message("Il monitoraggio è già in esecuzione.")
+        log_message("Monitor already started.")
         return
 
     debug_attivo = debug_var.get()
@@ -269,8 +269,8 @@ def avvia_script():
     finestre = lista_finestre()
     window = next((w for w in finestre if w.title == window_title), None)
     if not window:
-        log_message("Errore: finestra non trovata.")
-        messagebox.showerror("Errore", "Finestra non trovata. Aggiorna la lista o controlla il titolo.")
+        log_message("Error: Selected window not found.")
+        messagebox.showerror("Error", "Window not found. Update window list or check the title.")
         return
 
     salva_config(salvati)
@@ -282,22 +282,22 @@ def ferma_script():
     global running
     if running:
         running = False
-        log_message("Richiesta di fermata del monitoraggio.")
+        log_message("Monitoring script stopped.")
         aggiorna_stato_bottoni()
     else:
-        log_message("Il monitoraggio non è in esecuzione.")
+        log_message("Monitor is not in execution.")
 
 def aggiorna_stato_entry(chk_var, entry):
     if chk_var.get():
         entry.configure(state="disabled")
-        log_message("Campo salvato e bloccato.")
+        log_message("Field saved in config and locked.")
     else:
         entry.configure(state="normal")
-        log_message("Campo sbloccato per modifiche.")
+        log_message("Field unlocked.")
 
 # === GUI ===
 root = tk.Tk()
-root.title("Monitoraggio Risorse - GUI")
+root.title("ClashFarmer Resource Monitor")
 root.geometry("800x600")
 
 main_frame = ttk.Frame(root, padding=10)
@@ -309,12 +309,12 @@ main_frame.columnconfigure(1, weight=1)
 salvati = carica_config()
 
 campi = {
-    "intervallo": "Intervallo (minuti)",
+    "intervallo": "Check interval (minutes)",
     "gold": "Gold max",
     "elixir": "Elixir max",
     "dark_elixir": "Dark Elixir max",
-    "token": "Token Telegram",
-    "chat_id": "Telegram username"
+    "token": "Token Telegram Bot",
+    "chat_id": "Telegram user ID"
 }
 
 entries = {}
@@ -325,7 +325,7 @@ for key, label in campi.items():
     entry.grid(row=row, column=1, sticky="ew", padx=5, pady=3)
 
     if key == "chat_id":
-        btn_reg = ttk.Button(main_frame, text="Registrati", command=registra_telegram_username)
+        btn_reg = ttk.Button(main_frame, text="Register ID", command=registra_telegram_username)
         btn_reg.grid(row=row, column=3, padx=5, pady=3)
 
     if key in salvati:
@@ -340,26 +340,26 @@ for key, label in campi.items():
     row += 1
 
 tutte_var = tk.BooleanVar(value=salvati.get("tutte", True))
-ttk.Label(main_frame, text="Condizione risorse:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
-chk_tutte = ttk.Checkbutton(main_frame, text="Tutte le risorse al massimo", variable=tutte_var)
+ttk.Label(main_frame, text="Resoruce Condition:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
+chk_tutte = ttk.Checkbutton(main_frame, text="All (if disabled: if only one resource is above the limit the script will stop ClashFarmer)", variable=tutte_var)
 chk_tutte.grid(row=row, column=1, sticky="w", padx=5, pady=3)
 row += 1
 
 debug_var = tk.BooleanVar(value=False)
-chk_debug = ttk.Checkbutton(main_frame, text="Modalità Debug", variable=debug_var)
+chk_debug = ttk.Checkbutton(main_frame, text="Debug Mode (use only when errors occurred.)", variable=debug_var)
 chk_debug.grid(row=row, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 row += 1
 
-ttk.Label(main_frame, text="Finestra da monitorare:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
+ttk.Label(main_frame, text="Select ClashFarmer Window:").grid(row=row, column=0, sticky="w", padx=5, pady=3)
 finestra_var = tk.StringVar()
 finestra_menu = ttk.Combobox(main_frame, textvariable=finestra_var, width=60)
 finestra_menu['values'] = [w.title for w in lista_finestre()]
 finestra_menu.grid(row=row, column=1, columnspan=2, sticky="ew", padx=5, pady=3)
 row += 1
 
-btn_avvia = ttk.Button(main_frame, text="Avvia", command=avvia_script)
+btn_avvia = ttk.Button(main_frame, text="Start monitor", command=avvia_script)
 btn_avvia.grid(row=row, column=0, padx=5, pady=5, sticky="ew")
-btn_ferma = ttk.Button(main_frame, text="Ferma", command=ferma_script)
+btn_ferma = ttk.Button(main_frame, text="Stop monitor", command=ferma_script)
 btn_ferma.grid(row=row, column=1, padx=5, pady=5, sticky="ew")
 btn_aggiorna = ttk.Button(main_frame, text="Aggiorna Finestre",
                           command=lambda: finestra_menu.config(values=[w.title for w in lista_finestre()]))

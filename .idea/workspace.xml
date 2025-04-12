@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="Added exception KeyboardInterrupt to main.py just for pleasure.">
+    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="Created a new script with ChatGPT. to test and surely to fix.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/debug_crop.png" beforeDir="false" afterPath="$PROJECT_DIR$/debug_crop.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug_text.txt" beforeDir="false" afterPath="$PROJECT_DIR$/debug_text.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -22,26 +23,28 @@
       </list>
     </option>
   </component>
-  <component name="Git.Settings">
-    <option name="RECENT_BRANCH_BY_REPOSITORY">
-      <map>
-        <entry key="$PROJECT_DIR$" value="master" />
-      </map>
+  <component name="Git.Pull.Settings">
+    <option name="OPTIONS">
+      <set>
+        <option value="REBASE" />
+      </set>
     </option>
+  </component>
+  <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;Niko99thebg&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Niko99thebg/maxstorage_clashfarmer.git&quot;,
-    &quot;accountId&quot;: &quot;813e4459-ca85-46b5-bcc1-8a59ee17fb02&quot;
-  }
-}</component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="a71ba27f-67cd-4e05-99f5-df9cc913df9e" />
+        <option name="url" value="https://github.com/Niko99thebg/maxstorage_clashfarmer" />
+      </UrlAndAccount>
+    </option>
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
@@ -60,7 +63,6 @@
     &quot;Python.telebot.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;
   }
@@ -68,7 +70,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-4f4e415b4190-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.26053.29" />
+        <option value="bundled-python-sdk-c69650fc56ca-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.15619.17" />
       </set>
     </attachedChunks>
   </component>
@@ -145,15 +147,23 @@
       <option name="project" value="LOCAL" />
       <updated>1739069767159</updated>
     </task>
-    <task id="LOCAL-00009" summary="Added exception KeyboardInterrupt to main.py just for pleasure.">
+    <task id="LOCAL-00009" summary="Created a new script with ChatGPT. to test and surely to fix.">
       <option name="closed" value="true" />
-      <created>1744470005799</created>
+      <created>1744463112689</created>
       <option name="number" value="00009" />
       <option name="presentableId" value="LOCAL-00009" />
       <option name="project" value="LOCAL" />
-      <updated>1744470005799</updated>
+      <updated>1744463112689</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Created a new script with ChatGPT. to test and surely to fix.">
+      <option name="closed" value="true" />
+      <created>1744464829289</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1744464829289</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -164,6 +174,7 @@
     <MESSAGE value="Fist telegram bot implemention. Currently not used in main.py&#10;Updated requirements.txt" />
     <MESSAGE value="Removed telegram implementation. A bot cannot message another bot, group solution not working." />
     <MESSAGE value="Added exception KeyboardInterrupt to main.py just for pleasure." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added exception KeyboardInterrupt to main.py just for pleasure." />
+    <MESSAGE value="Created a new script with ChatGPT. to test and surely to fix." />
+    <option name="LAST_COMMIT_MESSAGE" value="Created a new script with ChatGPT. to test and surely to fix." />
   </component>
 </project>
