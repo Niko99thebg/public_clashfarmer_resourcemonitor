@@ -29,24 +29,17 @@ A Python GUI application that monitors your resource levels in ClashFarmer using
 
 ## Installation
 
-1. Clone the repository:
+1. Download the latest release:
 
-    ```bash
-    git clone https://github.com/yourusername/clashfarmer-monitor.git
-    cd clashfarmer-monitor
-    ```
+   👉 Go to the [Releases section](https://github.com/niko99thebg/public_clashfarmer_resourcemonitor/releases)  
+   and download the latest `.zip` file.
 
-2. Install dependencies:
+2. Extract the folder.
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+3. Run the program:
 
-3. Run the script:
-
-    ```bash
-    python main.py
-    ```
+   ```bash
+   ClashFarmer Resource Monitor.exe
 
 ---
 
