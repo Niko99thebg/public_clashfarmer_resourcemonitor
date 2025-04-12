@@ -17,8 +17,18 @@ import win32con
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance, ImageDraw
 
 import ctypes
+
 def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin() != 0
+
+import sys
+
+def resource_path(relative_path):
+    """Get absolute path to resource (works for dev and PyInstaller)"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 
 version=2.1
 
@@ -195,6 +205,7 @@ def resource_condition(text, gold_max, elixir_max, dark_elixir_max, require_all)
     pattern = r"Current Resources:\s*Gold:\s*(\d+)\s*Elixir:\s*(\d+)\s*Dark[_\s]?Elixir:\s*(\d+)"
     match = re.search(pattern, text, re.IGNORECASE)
     if match:
+        gold = elixir = dark = None
         gold = int(match.group(1))
         elixir = int(match.group(2))
         dark = int(match.group(3))
@@ -206,57 +217,6 @@ def resource_condition(text, gold_max, elixir_max, dark_elixir_max, require_all)
     elif debug_enabled:
         log_message("Pattern not found in OCR.")
     return False
-
-
-# def terminate_process():
-#     try:
-#         target_name = "ClashFarmer.exe"
-#         found = False
-#
-#         for proc in psutil.process_iter(['pid', 'name']):
-#             if proc.info['name'] and target_name.lower() in proc.info['name'].lower():
-#                 found = True
-#                 log_message(f"Force killing {proc.name()} (PID {proc.pid}) and its children...")
-#
-#                 # Terminate child processes first
-#                 for child in proc.children(recursive=True):
-#                     try:
-#                         if child.is_running():
-#                             child.kill()
-#                             try:
-#                                 child.wait(timeout=3)
-#                                 log_message(f"Child {child.name()} (PID {child.pid}) killed.")
-#                             except psutil.TimeoutExpired:
-#                                 if not child.is_running():
-#                                     log_message(f"Child {child.name()} (PID {child.pid}) killed (wait timeout, but process exited).")
-#                                 else:
-#                                     raise
-#                         else:
-#                             log_message(f"Child {child.name()} (PID {child.pid}) was already terminated.")
-#                     except Exception as e:
-#                         log_message(f"Failed to kill child PID {child.pid}: {e}")
-#
-#                 # Terminate parent process
-#                 try:
-#                     if proc.is_running():
-#                         proc.kill()
-#                         try:
-#                             proc.wait(timeout=3)
-#                             log_message(f"{proc.name()} (PID {proc.pid}) killed.")
-#                         except psutil.TimeoutExpired:
-#                             if not proc.is_running():
-#                                 log_message(f"{proc.name()} (PID {proc.pid}) killed (wait timeout, but process exited).")
-#                             else:
-#                                 raise
-#                     else:
-#                         log_message(f"{proc.name()} (PID {proc.pid}) was already terminated.")
-#                 except Exception as e:
-#                     log_message(f"Failed to kill {proc.name()} (PID {proc.pid}): {e}")
-#
-#         if not found:
-#             log_message("ClashFarmer.exe not found.")
-#     except Exception as e:
-#         log_message(f"Error during process termination: {e}")
 
 def run_dynamic_ahk_click(window):
     try:
@@ -282,7 +242,10 @@ def run_dynamic_ahk_click(window):
             f.write(ahk_code.strip())
 
         subprocess.Popen([ahk_path, "click_stop_bot.ahk"])
-        log_message(f"AutoHotKey SINGLE click sent at ({click_x}, {click_y})")
+
+        if debug_enabled:
+            log_message(f"AutoHotKey SINGLE click sent at ({click_x}, {click_y})")
+            pass
         return True
 
     except Exception as e:
@@ -375,7 +338,7 @@ def monitor_loop(config, window):
                 send_telegram(
                     config["token"],
                     config["chat_id"],
-                    "Max resources reached. ClashFarmer closed."
+                    "Max resources reached. ClashFarmer stopped."
                 )
                 stop_monitoring()
                 break
@@ -391,16 +354,16 @@ def monitor_loop(config, window):
 
 # === GUI ===
 root = tk.Tk()
-root.iconbitmap("icon.ico")
-root.title(f"ClashFarmer Resource Monitor - Ver. {version}")
+root.iconbitmap(resource_path("icon.ico"))
+root.title(f"ClashFarmer Resource Monitor - Ver. {version} - by Niko99thebg")
 root.geometry("800x600")
 
 # === Buttons icons
-start_icon = PhotoImage(file="start_icon.png")
-stop_icon = PhotoImage(file="stop_icon.png")
-exit_icon = PhotoImage(file="exit_icon.png")
-save_icon = PhotoImage(file="save_icon.png")
-refresh_icon = PhotoImage(file="refresh_icon.png")
+start_icon = PhotoImage(file=resource_path("start_icon.png"))
+stop_icon = PhotoImage(file=resource_path("stop_icon.png"))
+exit_icon = PhotoImage(file=resource_path("exit_icon.png"))
+save_icon = PhotoImage(file=resource_path("save_icon.png"))
+refresh_icon = PhotoImage(file=resource_path("refresh_icon.png"))
 
 
 # === GRID CONFIG root
@@ -523,7 +486,7 @@ def exit_app():
 bottom_right_frame = ttk.Frame(root, padding=5)
 bottom_right_frame.grid(row=2, column=0, sticky="e")
 
-btn_github = ttk.Button(bottom_right_frame, text="Github Project", command=open_github)
+btn_github = ttk.Button(bottom_right_frame, text="Github", command=open_github)
 btn_github.pack(side="left", padx=(0, 5))
 
 btn_exit = ttk.Button(bottom_right_frame, text="Exit", image=exit_icon, compound="left", command=exit_app)
