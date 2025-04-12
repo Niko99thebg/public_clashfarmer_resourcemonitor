@@ -54,13 +54,39 @@ def save_config_manual():
         log_message(f"Error saving configuration: {e}")
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
+    default_config = {
+        "interval": "",
+        "gold": "",
+        "elixir": "",
+        "dark_elixir": "",
+        "token": "",
+        "chat_id": "",
+        "all": False
+    }
+
+    def write_default_config(reason):
+        log_message(f"{reason} Creating new config.json with default values.")
         try:
-            with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
-        except:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(default_config, f, indent=4)
+            return default_config
+        except Exception as e:
+            log_message(f"Failed to create default config: {e}")
             return {}
-    return {}
+
+    # 1. File non esiste
+    if not os.path.exists(CONFIG_FILE):
+        return write_default_config("No config file found.")
+
+    # 2. File esiste ma può essere corrotto
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            config = json.load(f)
+            log_message("Config loaded from config.json.")
+            return config
+    except Exception as e:
+        return write_default_config(f"Error loading config file: {e}")
+
 
 def register_telegram_user():
     token = entries.get("token").get().strip()

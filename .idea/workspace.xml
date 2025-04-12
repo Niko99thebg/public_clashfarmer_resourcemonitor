@@ -4,14 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="hgf">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_crop.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_text.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-    </list>
+    <list default="true" id="85b3edad-0d81-4a26-af6d-3a2bd2418e72" name="Changes" comment="Released version 1.0&#10;config.json cleared." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -187,7 +180,15 @@
       <option name="project" value="LOCAL" />
       <updated>1744474447635</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="Released version 1.0&#10;config.json cleared.">
+      <option name="closed" value="true" />
+      <created>1744481196698</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1744481196698</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -200,6 +201,7 @@
     <MESSAGE value="Added exception KeyboardInterrupt to main.py just for pleasure." />
     <MESSAGE value="First beta release. To test." />
     <MESSAGE value="hgf" />
-    <option name="LAST_COMMIT_MESSAGE" value="hgf" />
+    <MESSAGE value="Released version 1.0&#10;config.json cleared." />
+    <option name="LAST_COMMIT_MESSAGE" value="Released version 1.0&#10;config.json cleared." />
   </component>
 </project>
