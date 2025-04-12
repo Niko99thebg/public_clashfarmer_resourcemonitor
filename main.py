@@ -1,152 +1,166 @@
-import win32gui
-import pyautogui
-#from PIL import Image     capire se serve veramente
-import numpy as np
-import easyocr
-import re
 import time
+import re
+import sys
+import psutil
+import requests
+import pygetwindow as gw
+from PIL import Image
+import pytesseract
+import pyautogui
 
-import coloredlogs, logging
+
+# Se Tesseract non è nel PATH, specificare il percorso
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\nicol\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+
+def lista_finestre():
+    """
+    Ritorna una lista di tutte le finestre aperte con un titolo non vuoto.
+    """
+    windows = gw.getAllWindows()
+    finestre = [w for w in windows if w.title.strip() != ""]
+    return finestre
 
 
-#Log settings
-log = logging.getLogger(__name__)
+def seleziona_finestra():
+    """
+    Visualizza un elenco numerato delle finestre aperte e chiede all'utente di scegliere quella da monitorare.
+    Restituisce la finestra selezionata o None se l'utente non ha fatto una scelta valida.
+    """
+    finestre = lista_finestre()
+    if not finestre:
+        print("Nessuna finestra aperta trovata.")
+        return None
 
-fieldstyle = {'asctime': {'color': 'green'},
-              'levelname': {'bold': True, 'color': 'black'},
-              'filename':{'color':'cyan'},
-              'funcName':{'color':'magenta'}}
+    print("Finestre aperte:")
+    for i, finestra in enumerate(finestre, start=1):
+        print(f"{i}. {finestra.title}")
 
-levelstyles = {'critical': {'bold': True, 'color': 'red'},
-               'debug': {'color': 'green'},
-               'error': {'color': 'red'},
-               'info': {'color':'white'},
-               'warning': {'color': 'yellow'}}
+    try:
+        scelta = int(input("Inserisci il numero della finestra da monitorare: "))
+        if 1 <= scelta <= len(finestre):
+            return finestre[scelta - 1]
+        else:
+            print("Scelta non valida.")
+            return None
+    except ValueError:
+        print("Inserisci un numero valido.")
+        return None
 
-coloredlogs.install(level=logging.INFO,
-                    logger=log,
-                    fmt='%(asctime)s [%(levelname)s] - [%(filename)s > %(funcName)s() > %(lineno)s] - %(message)s',
-                    datefmt=' %Y/%m/%d %H:%M:%S',
-                    field_styles=fieldstyle,
-                    level_styles=levelstyles
-                    )
 
-loggingfile = logging.FileHandler("logs.log")
-fileformat = logging.Formatter("%(asctime)s [%(levelname)s] - [%(filename)s > %(funcName)s() > %(lineno)s] - %(message)s")
-loggingfile.setFormatter(fileformat)
+def cattura_finestra(window):
+    """Cattura lo screenshot dell'intera finestra."""
+    # Ottieni le coordinate della finestra (left, top, width, height)
+    bbox = (window.left, window.top, window.width, window.height)
+    screenshot = pyautogui.screenshot(region=bbox)
+    return screenshot
 
-loggingfile.setStream(open('logs.log', 'a', encoding='utf-8'))
 
-log.addHandler(loggingfile)
+def leggi_testo_da_immagine(image):
+    """Estrae il testo dall'immagine usando OCR."""
+    return pytesseract.image_to_string(image)
 
-def visibleCheck():
-    def callback(hwnd, windows_list):
-        title = win32gui.GetWindowText(hwnd)
-        if win32gui.IsWindowVisible(hwnd) and title.strip():
-            windows_list.append((hwnd, title))
 
-    windows = []
-    win32gui.EnumWindows(callback, windows)
-    return windows
-
-def filterer(windows):
-    return [
-        (hwnd, title) for hwnd, title in windows if len(title) > 2
-    ]
-
-def chooseWindow(windows):
-    print("Opened windows:")
-    for idx, (_, title) in enumerate(windows):
-        print(f"{idx + 1}: {title}")
-
-    while True:
-        try:
-            choice = int(input("\nChoose the number of ClashFarmer: "))
-            if 1 <= choice <= len(windows):
-                return windows[choice - 1]
-            else:
-                log.warning("Please choose a number on your screen")
-        except ValueError:
-            log.warning("Please pick a number, not letter or symbol")
-
-def captureWindow(hwnd):
-    rect = win32gui.GetWindowRect(hwnd)
-    bbox = (rect[0], rect[1], rect[2], rect[3])
-    return pyautogui.screenshot(region=bbox)
-
-def textExtract(text):
-    match = re.search(r'\d[\d,]*', text)
+def condizione_risorse(test_text, gold_max, elixir_max, dark_elixir_max):
+    """
+    Verifica se nel testo sono presenti le righe 'Current Resources:'
+    e i valori massimi per Gold, Elixir e Dark_Elixir.
+    """
+    # Pattern per trovare le righe con i valori
+    pattern = (r"Current Resources:\s*"
+               r"Gold:\s*(\d+)\s*"
+               r"Elixir:\s*(\d+)\s*"
+               r"Dark[_\s]?Elixir:\s*(\d+)")
+    match = re.search(pattern, test_text, re.IGNORECASE | re.MULTILINE)
     if match:
-        return int(match.group(0).replace(',', ''))
-    return None
+        gold_val = int(match.group(1))
+        elixir_val = int(match.group(2))
+        dark_elixir_val = int(match.group(3))
+        print(f"Valori trovati: Gold={gold_val}, Elixir={elixir_val}, Dark Elixir={dark_elixir_val}")
+        # Confronta i valori trovati con quelli massimi impostati
+        if gold_val == gold_max and elixir_val == elixir_max and dark_elixir_val == dark_elixir_max:
+            return True
+    return False
 
-def resourceExtract(image):
-    image_array = np.array(image)
-    reader = easyocr.Reader(['en'], gpu=False)
-    results = reader.readtext(image_array, detail=0)
 
-    resources = {"gold": None, "elixir": None, "dark_elixir": None}
+def termina_processo(window):
+    """Termina il processo associato alla finestra."""
+    try:
+        # Usando win32gui e win32process per ottenere il PID della finestra
+        import win32gui, win32process
+        hwnd = window._hWnd  # handle della finestra
+        tid, pid = win32process.GetWindowThreadProcessId(hwnd)
+        proc = psutil.Process(pid)
+        proc.terminate()
+        proc.wait(timeout=5)
+        print(f"Processo {proc.pid} terminato.")
+    except Exception as e:
+        print("Errore nella terminazione del processo:", e)
 
-    for text in results:
-        text_lower = text.lower()
 
-        if resources["gold"] is None and "gold" in text_lower:
-            resources["gold"] = textExtract(text)
-        elif resources["elixir"] is None and "elixir" in text_lower and "dark" not in text_lower:
-            resources["elixir"] = textExtract(text)
-        elif resources["dark_elixir"] is None and ("dark elixir" in text_lower or "dark_elixir" in text_lower):
-            resources["dark_elixir"] = textExtract(text)
+def invia_messaggio_telegram(bot_token, chat_id, messaggio):
+    """Invia un messaggio Telegram usando il bot token e il chat_id."""
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": messaggio
+    }
+    try:
+        response = requests.post(url, data=payload)
+        if response.status_code == 200:
+            print("Messaggio Telegram inviato correttamente.")
+        else:
+            print("Errore nell'invio del messaggio Telegram:", response.text)
+    except Exception as e:
+        print(f"Errore durante la richiesta a Telegram: {e}")
 
-        if all(value is not None for value in resources.values()):
-            break
-
-    return resources
 
 def main():
-    print("\nLooking for ClashFarmer")
-    windows = visibleCheck()
-    app_windows = filterer(windows)
+    # Selezione della finestra da monitorare
+    window = None
+    while window is None:
+        window = seleziona_finestra()
+        if window is None:
+            print("Riprova la selezione della finestra.")
 
-    if not app_windows:
-        log.warning("ClashFarmer not found, make sure it's open and visible on the screen\n")
-        return
+    print(f"Finestra selezionata: {window.title}")
 
-    selected_window = chooseWindow(app_windows)
-    hwnd, title = selected_window
-    print(f"Selected window: {title}")
+    # Input dell'intervallo e dei valori massimi
+    try:
+        intervallo = float(input("Inserisci l'intervallo (in minuti) tra un controllo e l'altro: "))
+        gold_max = int(input("Inserisci il valore massimo per Gold: "))
+        elixir_max = int(input("Inserisci il valore massimo per Elixir: "))
+        dark_elixir_max = int(input("Inserisci il valore massimo per Dark Elixir: "))
+    except ValueError:
+        print("Input non valido. Termino il programma.")
+        sys.exit(1)
 
-    maxGold = int(input("Enter your max gold amount: "))
-    maxElixir = int(input("Enter your max elixir amount: "))
-    maxDark = int(input("Enter your max dark elixir amount: "))
+    bot_token = input("Inserisci il token del bot Telegram: ")
+    chat_id = input("Inserisci il chat_id (o username) per ricevere il messaggio Telegram: ")
 
     while True:
-        screenshot = captureWindow(hwnd)
-        if screenshot:
-            print("\nExtracting resources...")
-            resources = resourceExtract(screenshot)
-            print("\nExtracted Resources:")
-            for resource, value in resources.items():
-                print(f"{resource.capitalize()}: {value if value is not None else 'Not Found'}")
+        # Cattura lo screenshot della finestra
+        screenshot = cattura_finestra(window)
+        # Leggi il testo usando OCR
+        testo = leggi_testo_da_immagine(screenshot)
+        print("Testo OCR rilevato:\n", testo)
 
-            if (resources["gold"] is not None and resources["gold"] >= maxGold and
-                resources["elixir"] is not None and resources["elixir"] >= maxElixir and
-                resources["dark_elixir"] is not None and resources["dark_elixir"] >= maxDark):
-                print("All storages full, closing ClashFarmer...\n")
-                try:
-                    win32gui.PostMessage(hwnd, 0x0010, 0, 0)
-                    print("ClashFarmer closed")
-                except Exception as e:
-                    log.error(f"Failed to close ClashFarmer: {e}")
-                break
-            else:
-                print("Storages not yet full, will keep retrying\n")
+        # Verifica la condizione sui valori massimi
+        if condizione_risorse(testo, gold_max, elixir_max, dark_elixir_max):
+            print("Condizione soddisfatta: valori massimi trovati.")
+
+            # Termina il processo associato alla finestra
+            termina_processo(window)
+
+            # Invia il messaggio Telegram
+            messaggio = "Il processo associato alla finestra è stato terminato perché i valori massimi sono stati raggiunti."
+            invia_messaggio_telegram(bot_token, chat_id, messaggio)
+
+            break
         else:
-            print("Please make sure clashfarmer is open and visible on screen.")
+            print("Condizione non ancora soddisfatta. Prossimo controllo tra {} minuti...".format(intervallo))
 
-        time.sleep(30)
+        time.sleep(intervallo * 60)
+
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        log.info("Bot stopped by user - KeybordInterrupt")
+    main()
