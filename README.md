@@ -70,7 +70,7 @@ as long as you include proper attribution and comply with the terms of the licen
 ## Disclaimer
 
 This tool interacts with ClashFarmer and uses OCR automation.  
-Use at your own risk. I am not affiliated with Clash of Clans or ClashFarmer.
+Use at your own risk. I am not affiliated with [Clash of Clans](https://supercell.com/en/games/clashofclans/) or [ClashFarmer](https://www.clashfarmer.com).
 
 ---
 
