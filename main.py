@@ -355,7 +355,7 @@ def monitor_loop(config, window):
 # === GUI ===
 root = tk.Tk()
 root.iconbitmap(resource_path("icon.ico"))
-root.title(f"ClashFarmer Resource Monitor - Ver. {version} - by Niko99thebg")
+root.title(f"ClashFarmer Resource Monitor - Ver. {version}")
 root.geometry("800x600")
 
 # === Buttons icons
