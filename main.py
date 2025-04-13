@@ -28,7 +28,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-version=2.1
+version=2.2
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -311,11 +311,18 @@ def monitor_loop(config, window):
         log_message("Invalid interval value. Defaulting to 1 minute.")
         delay = 1
 
+    total_sleep = delay * 60  # total time to sleep in seconds
+    interval = 1  # check every 1 second
+
     while running:
         image = capture_window(window)
         if image is None:
             log_message("Invalid image, retrying in 5s...")
-            time.sleep(5)
+            for _ in range(5):
+                if not running:
+                    log_message("Monitoring stopped during retry.")
+                    return
+                time.sleep(1)
             continue
 
         text = read_text(image)
@@ -336,7 +343,7 @@ def monitor_loop(config, window):
                 send_telegram(
                     config["token"],
                     config["chat_id"],
-                    "Max resources reached. ClashFarmer stopped."
+                    "Max resources reached. ClashFarmer closed."
                 )
                 stop_monitoring()
                 break
@@ -345,9 +352,15 @@ def monitor_loop(config, window):
         except Exception as e:
             log_message(f"Error checking condition: {e}")
 
-        time.sleep(delay * 60)
+        # Sleep a little at a time to allow stopping
+        for _ in range(int(total_sleep)):
+            if not running:
+                log_message("Monitoring interrupted during wait.")
+                return
+            time.sleep(1)
 
     log_message("Monitoring session ended.")
+
 
 
 # === GUI ===
