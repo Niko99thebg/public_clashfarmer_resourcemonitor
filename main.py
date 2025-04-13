@@ -473,6 +473,14 @@ btn_stop = ttk.Button(bottom_left_frame, text="Stop", image=stop_icon, compound=
 btn_stop.image = stop_icon  # to prevent garbage collection
 btn_stop.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="w")
 
+# === BOTTOM CENTER LABEL (Credits)
+bottom_center_frame = ttk.Frame(root, padding=5)
+bottom_center_frame.grid(row=2, column=0)
+
+credits_label = ttk.Label(bottom_center_frame, text="Developed with 🩷 by Niko99thebg")
+credits_label.pack(pady=5)
+
+
 # === BOTTOM RIGHT BUTTONS (Github + Exit)
 def open_github():
     webbrowser.open_new("https://github.com/Niko99thebg/public_clashfarmer_resourcemonitor")
