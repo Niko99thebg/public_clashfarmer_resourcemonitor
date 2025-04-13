@@ -7,10 +7,3 @@
 /.idea/
 /.venv/
 /.venv/*
-/compile_exe.py
-/exit_icon.png
-/refresh_icon.png
-/save_icon.png
-/start_icon.png
-/stop_icon.png
-/Icon.ico
