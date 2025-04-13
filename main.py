@@ -5,7 +5,6 @@ import json
 import time
 import re
 import os
-import psutil
 import requests
 import pytesseract
 import pyautogui
@@ -13,7 +12,6 @@ import pygetwindow as gw
 import webbrowser
 import subprocess
 import win32gui
-import win32con
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance, ImageDraw
 
 import ctypes
@@ -477,7 +475,7 @@ btn_stop.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="w")
 bottom_center_frame = ttk.Frame(root, padding=5)
 bottom_center_frame.grid(row=2, column=0)
 
-credits_label = ttk.Label(bottom_center_frame, text="Developed with 🩷 by Niko99thebg")
+credits_label = ttk.Label(bottom_center_frame, text="Developed with ♥ by Niko99thebg")
 credits_label.pack(pady=5)
 
 
