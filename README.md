@@ -91,6 +91,9 @@ Enable the **Debug Mode** checkbox to:
 This is useful for troubleshooting OCR recognition or window capture issues.
 
 ---
+## Known issues
+- Check interval isn't working properly, should be fixed in version 2.2
+---
 
 ## License
 
