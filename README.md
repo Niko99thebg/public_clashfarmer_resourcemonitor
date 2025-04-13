@@ -92,7 +92,7 @@ This is useful for troubleshooting OCR recognition or window capture issues.
 
 ---
 ## Known issues
-- Check interval isn't working properly, should be fixed in version 2.2
+- "Stop" button is being partially covered by the "Developed ..." text in certain resolutions
 ---
 
 ## License
