@@ -39,23 +39,21 @@ A Python GUI application that monitors your resource levels in ClashFarmer using
 1. **Download the latest release:**
 
    👉 Go to the [Releases section](https://github.com/Niko99thebg/public_clashfarmer_resourcemonitor/releases)  
-   and download the latest `.zip` file.
+   and download the latest `ClashFarmerMonitor.exe` file.
 
-2. **Extract the folder** anywhere on your PC.
-
-3. **Run** `ClashFarmerMonitor.exe`  
+2. **Run** `ClashFarmerMonitor.exe`  
    > It will create a `config.json` file with your settings.
 
-4. **Fill in the required fields** in the GUI:  
+3. **Fill in the required fields** in the GUI:  
    - `Gold`, `Elixir`, `Dark Elixir` max values  
    - `Interval` in minutes  
    - *(Optional)* Telegram bot token and chat ID for notifications
 
-5. **Select** the ClashFarmer window from the dropdown list.
+4. **Select** the ClashFarmer window from the dropdown list.
 
-6. *(Optional)* Click **"Save Settings"** to persist your configuration.
+5. *(Optional)* Click **"Save Settings"** to persist your configuration.
 
-7. Click **Start** to begin monitoring.
+6. Click **Start** to begin monitoring.
 
 > ⚠️ **Important:** Always run the application as **Administrator** to ensure proper window interaction and AHK click functionality.
 
