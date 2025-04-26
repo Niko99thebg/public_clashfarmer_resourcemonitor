@@ -1,48 +1,77 @@
+#!/usr/bin/env python3
 import os
+import sys
 import subprocess
 import shutil
-import sys
+import glob
+import stat
+
+def on_rm_error(func, path, exc_info):
+    """
+    Callback per shutil.rmtree: rimuove il flag di sola lettura e riprova.
+    """
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 def build_exe():
-    print("=== Building ClashFarmerMonitor.exe ===\n")
+    """
+    Genera un exe standalone di BuilderHallBot includendo
+    automaticamente tutte le immagini .png e le icone .ico presenti nella
+    cartella corrente e poi pulisce manualmente le cartelle di build.
+    """
+    script_name = "main.py"
+    exe_name    = "ClashFarmerMonitor"
 
+    print(f"=== Building {exe_name}.exe ===\n")
+
+    python_exe = sys.executable
+
+    # Costruiamo il comando PyInstaller SENZA --clean per evitare errori interni
     command = [
-        "pyinstaller",
+        python_exe, "-m", "PyInstaller",
         "--onefile",
         "--windowed",
+        "--noconfirm",
         "--icon=icon.ico",
-        "--add-data=icon.ico;.",
-        "--add-data=exit_icon.png;.",
-        "--add-data=start_icon.png;.",
-        "--add-data=stop_icon.png;.",
-        "--add-data=refresh_icon.png;.",
-        "--add-data=save_icon.png;.",
-        "--name=ClashFarmerMonitor",
-        "main.py"
+        "--name", exe_name,
+        script_name
     ]
+
+    # Aggiungi automaticamente tutte le risorse .png e .ico
+    for pattern in ("*.png", "*.ico"):
+        for fn in glob.glob(pattern):
+            if fn == script_name:
+                continue
+            src = os.path.abspath(fn)
+            command += ["--add-data", f"{src};."]
 
     try:
         subprocess.run(command, check=True)
-        print("\n✅ Build complete! Check the 'dist' folder for ClashFarmerMonitor.exe")
+        print(f"\n✅ Build complete! Troverai {exe_name}.exe in dist/")
     except subprocess.CalledProcessError as e:
         print("\n❌ Build failed!")
         print(e)
         sys.exit(1)
 
-    # Cleanup temporary files
+    # Pulizia manuale
     print("\n🧹 Cleaning up temporary files...")
-
-    for folder in ["build", "__pycache__"]:
+    for folder in ("build", "__pycache__"):
         if os.path.isdir(folder):
-            shutil.rmtree(folder)
-            print(f"Deleted folder: {folder}")
+            try:
+                shutil.rmtree(folder, onerror=on_rm_error)
+                print(f"Deleted folder: {folder}")
+            except Exception as e:
+                print(f"Warning: non ho potuto cancellare '{folder}': {e}")
 
-    spec_file = "ClashFarmerMonitor.spec"
+    spec_file = f"{exe_name}.spec"
     if os.path.exists(spec_file):
-        os.remove(spec_file)
-        print(f"Deleted file: {spec_file}")
+        try:
+            os.remove(spec_file)
+            print(f"Deleted file: {spec_file}")
+        except Exception as e:
+            print(f"Warning: non ho potuto cancellare '{spec_file}': {e}")
 
-    print("✅ Cleanup complete.")
+    print("✅ Cleanup complete.\n")
 
 if __name__ == "__main__":
     build_exe()
