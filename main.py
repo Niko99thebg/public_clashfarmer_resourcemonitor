@@ -28,7 +28,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-version=2.2
+version=2.3
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -49,8 +49,9 @@ def log_message(msg):
 
     print(msg)
     if text_log:
+        ts = time.strftime('%H:%M:%S')
         text_log.configure(state="normal")
-        text_log.insert(tk.END, msg + "\n")
+        text_log.insert(tk.END, f"{ts} - {msg}\n")
         text_log.see(tk.END)
         text_log.configure(state="disabled")
 
