@@ -15,7 +15,7 @@ def on_rm_error(func, path, exc_info):
 
 def build_exe():
     """
-    Genera un exe standalone di BuilderHallBot includendo
+    Genera un exe standalone includendo
     automaticamente tutte le immagini .png e le icone .ico presenti nella
     cartella corrente e poi pulisce manualmente le cartelle di build.
     """
